@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnLuyen.vn với Gemini AI Assistant</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Settings Button -->
+    <button id="settings-btn" class="settings-float-btn" title="Cài đặt">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6m4.22-13.22l4.24 4.24M1.54 1.54l4.24 4.24M20.46 20.46l-4.24-4.24M1.54 20.46l4.24-4.24M22 12h-6m-6 0H1"/>
+        </svg>
+    </button>
+
+    <!-- Performance Indicator -->
+    <div id="performance-indicator" class="performance-indicator good">
+        <span id="perf-text">Performance: Good</span>
+    </div>
+
+    <div class="container">
+        <!-- Webview hiển thị trang OnLuyen -->
+        <div class="webview-container">
+            <!-- Navigation Bar -->
+            <div class="navigation-bar">
+                <div class="nav-controls">
+                    <button id="back-btn" class="nav-btn" title="Quay lại" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <button id="forward-btn" class="nav-btn" title="Tiến tới" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                    <button id="reload-btn" class="nav-btn" title="Tải lại">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                        </svg>
+                    </button>
+                    <button id="home-btn" class="nav-btn" title="Trang chủ">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="url-bar-container">
+                    <input type="text" id="url-bar" class="url-bar" placeholder="Nhập URL..." />
+                    <button id="go-btn" class="nav-btn" title="Đi tới">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Overlay hiển thị vị trí click -->
+            <div id="click-overlay" class="click-overlay hidden"></div>
+            
+            <webview 
+                id="onluyen-webview" 
+                src="https://app.onluyen.vn/"
+                partition="persist:onluyen"
+                allowpopups
+                webpreferences="webSecurity=no"
+            ></webview>
+        </div>
+
+        <!-- Sidebar điều khiển -->
+        <div class="sidebar">
+            <h2>🤖 AI Assistant Control Panel</h2>
+            
+            <!-- API Key Input -->
+            <div class="control-group">
+                <label for="api-key">Gemini API Key:</label>
+                <input 
+                    type="password" 
+                    id="api-key" 
+                    placeholder="Nhập API Key của bạn"
+                />
+                <small>
+                    <a href="#" id="toggle-api-key" style="color: #3498db;">Hiện/Ẩn</a> |
+                    <a href="#" id="save-api-key" style="color: #27ae60;">Lưu</a>
+                </small>
+            </div>
+
+            <!-- Model Selection -->
+            <div class="control-group">
+                <label for="ai-model">Chọn Model:</label>
+                <select id="ai-model">
+                    <optgroup label="Gemini 2.5 Series (Mới nhất)">
+                        <option value="gemini-2.5-flash" selected>⚡ Gemini 2.5 Flash (Nhanh, hiệu quả)</option>
+                        <option value="gemini-2.5-flash-lite">💨 Gemini 2.5 Flash Lite (Siêu nhanh)</option>
+                        <option value="gemini-2.5-pro">🚀 Gemini 2.5 Pro (Mạnh nhất)</option>
+                    </optgroup>
+                    <optgroup label="Gemini 2.0 Series">
+                        <option value="gemini-2.0-flash-exp">🧪 Gemini 2.0 Flash Experimental</option>
+                    </optgroup>
+                    <optgroup label="Gemini 1.5 Series">
+                        <option value="gemini-1.5-flash">⚡ Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro">💎 Gemini 1.5 Pro</option>
+                    </optgroup>
+                </select>
+                <small style="color: #666;">
+                    💡 Khuyến nghị: 2.5 Flash cho cân bằng tốc độ và chất lượng
+                </small>
+            </div>
+
+            <!-- Custom Prompt -->
+            <div class="control-group">
+                <label for="custom-prompt">Lời nhắn cho AI (tùy chọn):</label>
+                <textarea 
+                    id="custom-prompt" 
+                    placeholder="Ví dụ:&#10;- Giải chi tiết câu hỏi này&#10;- Chọn đáp án đúng và giải thích&#10;- Làm tất cả các câu trong trang&#10;- Nộp bài sau khi hoàn thành"
+                    rows="4"
+                ></textarea>
+                <small style="color: #666;">
+                    💡 AI sẽ tự động phân tích và giải bài tập
+                </small>
+            </div>
+
+            <!-- Mode Selection -->
+            <div class="mode-selection">
+                <label>Chế độ AI:</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="ai-mode" value="analyze" checked>
+                        <span>📊 Phân tích</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="ai-mode" value="action">
+                        <span>🎯 Thực hiện hành động</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="ai-mode" value="auto">
+                        <span>🔄 Tự động</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Nút chụp và gửi -->
+            <button id="capture-and-send-btn" class="btn btn-primary">
+                📸 Chụp và Gửi AI
+            </button>
+
+            <!-- Hiển thị ảnh đã chụp -->
+            <div class="screenshot-preview">
+                <h3>📷 Ảnh Đã Chụp:</h3>
+                <div id="screenshot-container">
+                    <p class="placeholder">Chưa có ảnh nào</p>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div id="action-controls" class="action-controls hidden">
+                <h3>🎮 Điều khiển hành động:</h3>
+                <div class="action-buttons">
+                    <button id="execute-all-btn" class="btn btn-action">
+                        ▶️ Thực hiện tất cả
+                    </button>
+                    <button id="execute-step-btn" class="btn btn-action">
+                        ⏭️ Thực hiện từng bước
+                    </button>
+                    <button id="stop-btn" class="btn btn-danger">
+                        ⏹️ Dừng
+                    </button>
+                </div>
+                
+                <!-- Actions Queue -->
+                <div id="actions-queue" class="actions-queue">
+                    <h4>📋 Danh sách hành động:</h4>
+                    <div id="actions-list" class="actions-list">
+                        <p class="placeholder">Chưa có hành động nào</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading indicator -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <span>Đang xử lý...</span>
+            </div>
+
+            <!-- Hiển thị kết quả từ Gemini -->
+            <div class="result-container">
+                <h3>💡 Kết Quả AI:</h3>
+                <div id="gemini-result">
+                    <p class="placeholder">Chưa có kết quả</p>
+                </div>
+            </div>
+
+            <!-- Knowledge Base Section -->
+            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #eee;">
+            <div class="knowledge-base-section">
+                <h2>📚 Knowledge Base & RAG</h2>
+                
+                <div class="control-group">
+                    <label for="kb-question">Question:</label>
+                    <textarea id="kb-question" rows="2" placeholder="Enter question for knowledge base"></textarea>
+                </div>
+                <div class="control-group">
+                    <label for="kb-answer">Answer:</label>
+                    <textarea id="kb-answer" rows="4" placeholder="Enter answer for knowledge base"></textarea>
+                </div>
+                <button id="save-knowledge-btn" class="btn btn-primary" style="margin-bottom: 20px;">💾 Save Knowledge</button>
+        
+                <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px dashed #ccc;">
+        
+                <h3>Ask RAG:</h3>
+                <div class="control-group">
+                    <label for="rag-query-input">Your Query:</label>
+                    <textarea id="rag-query-input" rows="2" placeholder="Ask a question to the RAG system"></textarea>
+                </div>
+                <button id="rag-query-btn" class="btn btn-success" style="margin-bottom: 20px;">❓ Ask RAG</button>
+        
+                <h3>RAG Response:</h3>
+                <div id="rag-response">
+                    <p class="placeholder">RAG response will appear here.</p>
+                </div>
+            </div>
+
+            <!-- Footer info -->
+            <div class="footer-info">
+                <p>💡 <strong>Hướng dẫn:</strong></p>
+                <ol>
+                    <li>Nhập API Key Gemini</li>
+                    <li>Chọn chế độ AI</li>
+                    <li>Chụp màn hình trang web</li>
+                    <li>Gửi tới Gemini AI</li>
+                    <li>AI sẽ phân tích và thực hiện</li>
+                </ol>
+                <p style="margin-top: 10px;">
+                    <strong>Phím tắt:</strong><br>
+                    • Ctrl+S: Chụp màn hình<br>
+                    • Ctrl+Enter: Gửi AI<br>
+                    • Ctrl+A: Toggle Auto Mode<br>
+                    • F12: Dev Console
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Cài Đặt Performance</h2>
+                <button class="modal-close" id="close-settings">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Performance Settings Section -->
+                <div class="settings-section">
+                    <h3>🚀 Tối Ưu Hiệu Năng</h3>
+                    
+                    <!-- Screenshot Quality -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="screenshot-quality">📸 Screenshot Quality</label>
+                            <small>Giảm chất lượng ảnh để tăng tốc độ</small>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" id="screenshot-quality" min="30" max="100" value="70" step="10">
+                            <span id="quality-value">70%</span>
+                        </div>
+                    </div>
+
+                    <!-- Dev Console -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="auto-dev-console">🔧 Auto Open Dev Console</label>
+                            <small>Tắt để giảm RAM usage khi khởi động</small>
+                        </div>
+                        <div class="setting-control">
+                            <label class="switch">
+                                <input type="checkbox" id="auto-dev-console" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- DOM Snapshot Limit -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="dom-limit">📄 DOM Snapshot Limit</label>
+                            <small>Giảm số elements để phân tích nhanh hơn</small>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" id="dom-limit" min="20" max="200" value="100" step="20">
+                            <span id="dom-value">100</span>
+                        </div>
+                    </div>
+
+                    <!-- Lazy Load -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="lazy-load">⚡ Lazy Load Components</label>
+                            <small>Chỉ load components khi cần thiết</small>
+                        </div>
+                        <div class="setting-control">
+                            <label class="switch">
+                                <input type="checkbox" id="lazy-load" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Animation -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="reduce-animation">🎨 Reduce Animations</label>
+                            <small>Tắt animation để tăng FPS</small>
+                        </div>
+                        <div class="setting-control">
+                            <label class="switch">
+                                <input type="checkbox" id="reduce-animation">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Auto Mode Delay -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="auto-delay">⏱️ Auto Mode Delay (ms)</label>
+                            <small>Thời gian chờ giữa các action</small>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" id="auto-delay" min="100" max="2000" value="500" step="100">
+                            <span id="delay-value">500ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="settings-section">
+                    <h3>🔬 Cài Đặt Nâng Cao</h3>
+                    
+                    <!-- Cache -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="enable-cache">💾 Enable Response Cache</label>
+                            <small>Cache API responses để giảm requests</small>
+                        </div>
+                        <div class="setting-control">
+                            <label class="switch">
+                                <input type="checkbox" id="enable-cache" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Debug Mode -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="debug-mode">🐛 Debug Mode</label>
+                            <small>Hiển thị logs chi tiết</small>
+                        </div>
+                        <div class="setting-control">
+                            <label class="switch">
+                                <input type="checkbox" id="debug-mode">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Stats -->
+                <div class="settings-section">
+                    <h3>📊 Performance Stats</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-label">RAM Usage</span>
+                            <span class="stat-value" id="ram-usage">0 MB</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">FPS</span>
+                            <span class="stat-value" id="fps-counter">60</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Actions/Min</span>
+                            <span class="stat-value" id="actions-per-min">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Cache Size</span>
+                            <span class="stat-value" id="cache-size">0 KB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="reset-settings">🔄 Reset to Default</button>
+                <button class="btn btn-primary" id="save-settings">💾 Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "name": "onluyen-electron-app",
+  "version": "2.0.0",
+  "description": "OnLuyen.vn AI Assistant với Gemini - Performance Optimized",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "start-fast": "electron . --disable-gpu --disable-software-rasterizer",
+    "start-debug": "electron . --enable-logging --v=1",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "clean": "rm -rf dist node_modules/.cache",
+    "test": "echo \"No tests configured\" && exit 0"
+  },
+  "keywords": [
+    "electron",
+    "webview",
+    "gemini",
+    "ai",
+    "assistant",
+    "onluyen"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "lowdb": "^7.0.1"
+  },
+  "build": {
+    "appId": "com.yourname.onluyen-ai",
+    "productName": "OnLuyen AI Assistant",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "compression": "maximum",
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "files": [
+      "**/*",
+      "!**/*.ts",
+      "!*.log",
+      "!dist",
+      "!.git",
+      "!.github",
+      "!node_modules/*/{README.md,CHANGELOG.md,readme.md,changelog.md}",
+      "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!node_modules/.bin"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Education",
+      "icon": "build/icon.png"
+    }
+  }
+}
