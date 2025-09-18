@@ -62,5 +62,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Nhấn phím
   performKey: async (key) => {
     return await ipcRenderer.invoke('perform-key', key);
+  },
+
+  // Mở cửa sổ pop-up
+  openPopupWindow: () => {
+    ipcRenderer.send('open-popup-window');
+  },
+
+  // Lắng nghe sự kiện để chuyển sang chế độ control panel
+  onSetControlPanelMode: (callback) => {
+    ipcRenderer.on('set-control-panel-mode', callback);
+  },
+
+  // Lắng nghe sự kiện để chuyển sang chế độ chỉ webview
+  onSetWebviewOnlyMode: (callback) => {
+    ipcRenderer.on('set-webview-only-mode', callback);
   }
 });

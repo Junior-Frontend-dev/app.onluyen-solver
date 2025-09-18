@@ -151,12 +151,49 @@ body {
     flex-direction: column;
 }
 
+.sidebar.hidden {
+    display: none;
+}
+
 .sidebar h2 {
     color: #2c3e50;
     margin-bottom: 20px;
     padding-bottom: 10px;
     border-bottom: 2px solid #3498db;
 }
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.pop-out-btn {
+    background: none;
+    border: 1px solid #ddd;
+    color: #555;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pop-out-btn:hover {
+    background: #f0f0f0;
+    border-color: #ccc;
+}
+
+.webview-container.hidden {
+    display: none;
+}
+
 
 .sidebar h3 {
     color: #34495e;

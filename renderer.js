@@ -38,6 +38,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const homeBtn = document.getElementById('home-btn');
     const urlBar = document.getElementById('url-bar');
     const goBtn = document.getElementById('go-btn');
+    const popOutBtn = document.getElementById('pop-out-btn');
+
+    // ============= POP OUT FUNCTIONALITY =============
+    popOutBtn.addEventListener('click', () => {
+        window.electronAPI.openPopupWindow();
+    });
+
+    window.electronAPI.onSetControlPanelMode(() => {
+        console.log('Setting control panel only mode');
+        const webviewContainer = document.querySelector('.webview-container');
+        const sidebar = document.querySelector('.sidebar');
+        const settingsBtn = document.getElementById('settings-btn');
+        const perfIndicator = document.getElementById('performance-indicator');
+        
+        if (webviewContainer) webviewContainer.classList.add('hidden');
+        if (sidebar) {
+            sidebar.style.width = '100%';
+            sidebar.style.boxShadow = 'none';
+        }
+        if (popOutBtn) popOutBtn.style.display = 'none';
+        if (settingsBtn) settingsBtn.style.display = 'none';
+        if (perfIndicator) perfIndicator.style.display = 'none';
+    });
+
+    window.electronAPI.onSetWebviewOnlyMode(() => {
+        console.log('Setting webview only mode');
+        const sidebar = document.querySelector('.sidebar');
+        const settingsBtn = document.getElementById('settings-btn');
+        if (sidebar) sidebar.classList.add('hidden');
+        // Optionally hide the settings button too
+        if (settingsBtn) settingsBtn.style.display = 'none';
+    });
 
     // ============= API KEY MANAGEMENT =============
     

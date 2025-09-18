@@ -9,7 +9,8 @@ app.disableHardwareAcceleration();
 
 let mainWindow;
 let devWindow;
-let webviewContents;
+let popupWindow; // Cửa sổ cho control panel
+let mainWebviewContents; // Webview của cửa sổ chính
 
 // Tạo cửa sổ Dev Console
 function createDevConsole() {
@@ -52,6 +53,45 @@ function devLog(message, type = 'info') {
     });
   }
 }
+
+// Xử lý mở cửa sổ pop-up
+ipcMain.on('open-popup-window', (event) => {
+  if (popupWindow) {
+    popupWindow.focus();
+    return;
+  }
+
+  popupWindow = new BrowserWindow({
+    width: 500,
+    height: 800,
+    parent: mainWindow,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webviewTag: true
+    },
+    autoHideMenuBar: true,
+  });
+
+  popupWindow.loadFile('index.html');
+
+  // Gửi tin nhắn để chuyển sang chế độ control panel khi cửa sổ sẵn sàng
+  popupWindow.webContents.once('dom-ready', () => {
+    popupWindow.webContents.send('set-control-panel-mode');
+  });
+
+  // Gửi tin nhắn cho cửa sổ chính để ẩn sidebar
+  mainWindow.webContents.send('set-webview-only-mode');
+
+  popupWindow.on('closed', () => {
+    popupWindow = null;
+    // Khi pop-up đóng, đóng cả cửa sổ chính
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+  });
+});
 
 // Tạo cửa sổ chính của ứng dụng
 function createWindow() {
@@ -102,6 +142,10 @@ function createWindow() {
     mainWindow = null;
     if (devWindow && !devWindow.isDestroyed()) {
       devWindow.close();
+    }
+    // Khi cửa sổ chính đóng, đóng cả pop-up
+    if (popupWindow && !popupWindow.isDestroyed()) {
+      popupWindow.close();
     }
   });
 
@@ -163,15 +207,19 @@ app.on('window-all-closed', () => {
 
 // Lưu reference tới webview contents
 ipcMain.on('register-webview', (event, webContentsId) => {
-  const { webContents } = require('electron');
-  webviewContents = webContents.fromId(webContentsId);
-  devLog(`✅ Webview đã được đăng ký với ID: ${webContentsId}`, 'success');
+  const senderWindow = BrowserWindow.fromWebContents(event.sender);
+  // Chỉ đăng ký webview từ cửa sổ chính
+  if (senderWindow === mainWindow) {
+    const { webContents } = require('electron');
+    mainWebviewContents = webContents.fromId(webContentsId);
+    devLog(`✅ Webview chính đã được đăng ký với ID: ${webContentsId}`, 'success');
+  }
 });
 
 // Xử lý chụp màn hình từ webview - FIXED
 ipcMain.handle('capture-screenshot', async () => {
   try {
-    if (!webviewContents) {
+    if (!mainWebviewContents) {
       throw new Error('Webview chưa sẵn sàng. Vui lòng đợi trang web tải xong.');
     }
 
@@ -281,8 +329,8 @@ ipcMain.handle('capture-screenshot', async () => {
     `;
 
     const [image, domData] = await Promise.all([
-        webviewContents.capturePage(),
-        webviewContents.executeJavaScript(getDomSnapshotScript)
+        mainWebviewContents.capturePage(),
+        mainWebviewContents.executeJavaScript(getDomSnapshotScript)
     ]);
 
     const screenshot = image.toDataURL();
@@ -477,13 +525,13 @@ Nếu không tìm thấy câu hỏi, trả về:
 // Xử lý click chuột - FIXED
 ipcMain.handle('perform-click', async (event, x, y) => {
   try {
-    if (!webviewContents) {
+    if (!mainWebviewContents) {
       throw new Error('Webview chưa sẵn sàng');
     }
 
     devLog(`🖱️ Click tại vị trí (${x}, ${y})`, 'info');
 
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'mouseDown',
       x: Math.round(x),
       y: Math.round(y),
@@ -493,7 +541,7 @@ ipcMain.handle('perform-click', async (event, x, y) => {
 
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'mouseUp',
       x: Math.round(x),
       y: Math.round(y),
@@ -510,7 +558,7 @@ ipcMain.handle('perform-click', async (event, x, y) => {
 // Xử lý nhập text - FIXED
 ipcMain.handle('perform-type', async (event, text, x, y) => {
   try {
-    if (!webviewContents) {
+    if (!mainWebviewContents) {
       throw new Error('Webview chưa sẵn sàng');
     }
 
@@ -522,7 +570,7 @@ ipcMain.handle('perform-type', async (event, text, x, y) => {
 
     // Click vào vị trí trước
     if (x !== undefined && y !== undefined) {
-      webviewContents.sendInputEvent({
+      mainWebviewContents.sendInputEvent({
         type: 'mouseDown',
         x: Math.round(x),
         y: Math.round(y),
@@ -532,7 +580,7 @@ ipcMain.handle('perform-type', async (event, text, x, y) => {
 
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      webviewContents.sendInputEvent({
+      mainWebviewContents.sendInputEvent({
         type: 'mouseUp',
         x: Math.round(x),
         y: Math.round(y),
@@ -543,14 +591,14 @@ ipcMain.handle('perform-type', async (event, text, x, y) => {
     }
 
     // Clear existing text
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'keyDown',
       keyCode: 'a',
       modifiers: ['control']
     });
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'keyDown',
       keyCode: 'Delete'
     });
@@ -558,7 +606,7 @@ ipcMain.handle('perform-type', async (event, text, x, y) => {
 
     // Type new text
     for (const char of text.toString()) {
-      webviewContents.sendInputEvent({
+      mainWebviewContents.sendInputEvent({
         type: 'char',
         keyCode: char
       });
@@ -576,13 +624,13 @@ ipcMain.handle('perform-type', async (event, text, x, y) => {
 // Các handlers khác giữ nguyên...
 ipcMain.handle('perform-clear', async (event, x, y) => {
   try {
-    if (!webviewContents) {
+    if (!mainWebviewContents) {
       throw new Error('Webview chưa sẵn sàng');
     }
 
     devLog(`🗑️ Xóa nội dung tại (${x}, ${y})`, 'info');
 
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'mouseDown',
       x: Math.round(x),
       y: Math.round(y),
@@ -592,7 +640,7 @@ ipcMain.handle('perform-clear', async (event, x, y) => {
 
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'keyDown',
       keyCode: 'Delete'
     });
@@ -606,11 +654,11 @@ ipcMain.handle('perform-clear', async (event, x, y) => {
 
 ipcMain.handle('perform-move', async (event, x, y) => {
   try {
-    if (!webviewContents) {
+    if (!mainWebviewContents) {
       throw new Error('Webview chưa sẵn sàng');
     }
 
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'mouseMove',
       x: Math.round(x),
       y: Math.round(y)
@@ -626,13 +674,13 @@ ipcMain.handle('perform-move', async (event, x, y) => {
 
 ipcMain.handle('perform-scroll', async (event, deltaY) => {
   try {
-    if (!webviewContents) {
+    if (!mainWebviewContents) {
       throw new Error('Webview chưa sẵn sàng');
     }
 
     const scrollAmount = deltaY || 300;
     
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'mouseWheel',
       x: 0,
       y: 0,
@@ -650,7 +698,7 @@ ipcMain.handle('perform-scroll', async (event, deltaY) => {
 
 ipcMain.handle('perform-key', async (event, key) => {
   try {
-    if (!webviewContents) {
+    if (!mainWebviewContents) {
       throw new Error('Webview chưa sẵn sàng');
     }
 
@@ -668,14 +716,14 @@ ipcMain.handle('perform-key', async (event, key) => {
 
     const keyCode = keyMap[key] || key;
 
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'keyDown',
       keyCode: keyCode
     });
 
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    webviewContents.sendInputEvent({
+    mainWebviewContents.sendInputEvent({
       type: 'keyUp',
       keyCode: keyCode
     });
