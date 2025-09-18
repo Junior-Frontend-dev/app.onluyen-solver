@@ -1,8 +1,7 @@
 # OnLuyen.vn AI Assistant
 
-Một ứng dụng desktop được xây dựng bằng Electron giúp tăng cường trải nghiệm học tập trên trang web [App.onluyen.vn/](https://app.onluyen.vn/) bằng cách tích hợp một trợ lý AI mạnh mẽ được cung cấp bởi Google Gemini.
+Một ứng dụng desktop được xây dựng bằng Electron giúp tăng cường trải nghiệm học tập trên trang web [App.onluyen.vn](https://app.onluyen.vn/) bằng cách tích hợp một trợ lý AI mạnh mẽ được cung cấp bởi Google Gemini.
 
-![Giao diện ứng dụng](https://i.imgur.com/your-screenshot.png) <!-- Bạn có thể thay thế bằng ảnh chụp màn hình thực tế -->
 
 ## ✨ Tính Năng Chính
 
@@ -40,8 +39,8 @@ Một ứng dụng desktop được xây dựng bằng Electron giúp tăng cư�
 
 1.  **Clone a repository:**
     ```bash
-    git clone https://your-repository-url.git
-    cd AI-fake-main
+    git clone https://github.com/Junior-Frontend-dev/app.onluyen-solver
+    cd app.onluyen-solver-main
     ```
 
 2.  **Cài đặt các dependency:**
