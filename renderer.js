@@ -10,6 +10,49 @@ let screenshotDimensions = null;
 let isAutoModeActive = false;
 let autoModeInterval = null;
 
+const defaultSettings = {
+    screenshotQuality: 70,
+    autoDevConsole: true,
+    domLimit: 100,
+    lazyLoad: true,
+    reduceAnimation: false,
+    autoDelay: 500,
+    enableCache: true,
+    debugMode: false,
+    disableNotifications: false,
+};
+
+let appSettings = { ...defaultSettings };
+
+function showNotification(message, type = 'info') {
+    if (appSettings.disableNotifications) return; // Check if notifications are disabled
+
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    const icons = {
+        success: '✓',
+        error: '✗',
+        warning: '⚠',
+        info: 'ℹ'
+    };
+    
+    notification.innerHTML = (
+        `
+        <span class="notification-icon">${icons[type]}</span>
+        <span class="notification-message">${message}</span>
+    `
+    );
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove notification after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
 // Đợi DOM load xong
 document.addEventListener('DOMContentLoaded', () => {
     // Get all DOM elements
@@ -30,8 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopBtn = document.getElementById('stop-btn');
     const actionsList = document.getElementById('actions-list');
     const clickOverlay = document.getElementById('click-overlay');
-    
-    // Navigation elements
     const backBtn = document.getElementById('back-btn');
     const forwardBtn = document.getElementById('forward-btn');
     const reloadBtn = document.getElementById('reload-btn');
@@ -39,6 +80,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlBar = document.getElementById('url-bar');
     const goBtn = document.getElementById('go-btn');
     const popOutBtn = document.getElementById('pop-out-btn');
+
+    // Setting Elements
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsBtn = document.getElementById('close-settings');
+    const modalBackdrop = document.querySelector('.modal-backdrop');
+    const saveSettingsBtn = document.getElementById('save-settings');
+    const resetSettingsBtn = document.getElementById('reset-settings');
+    const qualitySlider = document.getElementById('screenshot-quality');
+    const qualityValue = document.getElementById('quality-value');
+    const autoDevConsoleSwitch = document.getElementById('auto-dev-console');
+    const domLimitSlider = document.getElementById('dom-limit');
+    const domValue = document.getElementById('dom-value');
+    const lazyLoadSwitch = document.getElementById('lazy-load');
+    const reduceAnimationSwitch = document.getElementById('reduce-animation');
+    const autoDelaySlider = document.getElementById('auto-delay');
+    const delayValue = document.getElementById('delay-value');
+    const enableCacheSwitch = document.getElementById('enable-cache');
+    const debugModeSwitch = document.getElementById('debug-mode');
+    const disableNotificationsSwitch = document.getElementById('disable-notifications');
+
+    // Stats Elements
+    const ramUsageEl = document.getElementById('ram-usage');
+    const fpsCounterEl = document.getElementById('fps-counter');
+    const actionsPerMinEl = document.getElementById('actions-per-min');
+    const cacheSizeEl = document.getElementById('cache-size');
+
+    // --- SETTINGS INITIALIZATION ---
+    // This must run before any function that might call showNotification()
+    loadSettings();
 
     // ============= POP OUT FUNCTIONALITY =============
     popOutBtn.addEventListener('click', () => {
@@ -759,6 +830,8 @@ QUAN TRỌNG:
     }
 
     function showNotification(message, type = 'info') {
+        if (appSettings.disableNotifications) return; // Check if notifications are disabled
+
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         
@@ -789,45 +862,25 @@ QUAN TRỌNG:
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    // Make performance indicator draggable
+    const perfIndicator = document.getElementById('performance-indicator');
+    perfIndicator.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', null);
+        e.target.style.opacity = '0.5';
+    });
+
+    perfIndicator.addEventListener('dragend', (e) => {
+        e.target.style.opacity = '1';
+        perfIndicator.style.left = `${e.clientX}px`;
+        perfIndicator.style.top = `${e.clientY}px`;
+    });
+
+    document.body.addEventListener("dragover", e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    });
+
     // ============= SETTINGS MODAL =============
-    const settingsBtn = document.getElementById('settings-btn');
-    const settingsModal = document.getElementById('settings-modal');
-    const closeSettingsBtn = document.getElementById('close-settings');
-    const modalBackdrop = document.querySelector('.modal-backdrop');
-    const saveSettingsBtn = document.getElementById('save-settings');
-    const resetSettingsBtn = document.getElementById('reset-settings');
-
-    // Setting Elements
-    const qualitySlider = document.getElementById('screenshot-quality');
-    const qualityValue = document.getElementById('quality-value');
-    const autoDevConsoleSwitch = document.getElementById('auto-dev-console');
-    const domLimitSlider = document.getElementById('dom-limit');
-    const domValue = document.getElementById('dom-value');
-    const lazyLoadSwitch = document.getElementById('lazy-load');
-    const reduceAnimationSwitch = document.getElementById('reduce-animation');
-    const autoDelaySlider = document.getElementById('auto-delay');
-    const delayValue = document.getElementById('delay-value');
-    const enableCacheSwitch = document.getElementById('enable-cache');
-    const debugModeSwitch = document.getElementById('debug-mode');
-
-    // Stats Elements
-    const ramUsageEl = document.getElementById('ram-usage');
-    const fpsCounterEl = document.getElementById('fps-counter');
-    const actionsPerMinEl = document.getElementById('actions-per-min');
-    const cacheSizeEl = document.getElementById('cache-size');
-
-    const defaultSettings = {
-        screenshotQuality: 70,
-        autoDevConsole: true,
-        domLimit: 100,
-        lazyLoad: true,
-        reduceAnimation: false,
-        autoDelay: 500,
-        enableCache: true,
-        debugMode: false,
-    };
-
-    let appSettings = { ...defaultSettings };
 
     function saveSettings() {
         try {
@@ -867,6 +920,7 @@ QUAN TRỌNG:
         delayValue.textContent = `${appSettings.autoDelay}ms`;
         enableCacheSwitch.checked = appSettings.enableCache;
         debugModeSwitch.checked = appSettings.debugMode;
+        disableNotificationsSwitch.checked = appSettings.disableNotifications;
     }
 
     function applySettings() {
@@ -935,6 +989,10 @@ QUAN TRỌNG:
     debugModeSwitch.addEventListener('change', (e) => {
         appSettings.debugMode = e.target.checked;
         showNotification(`Chế độ Debug ${appSettings.debugMode ? 'đã bật' : 'đã tắt'}.`, 'info');
+    });
+
+    disableNotificationsSwitch.addEventListener('change', (e) => {
+        appSettings.disableNotifications = e.target.checked;
     });
 
     // Performance Stats Update
@@ -1056,11 +1114,8 @@ QUAN TRỌNG:
             }
         }
     });
-});
 
-
-// Knowledge Base & RAG functionality
-document.addEventListener('DOMContentLoaded', () => {
+    // Knowledge Base & RAG functionality
     const kbQuestionInput = document.getElementById('kb-question');
     const kbAnswerInput = document.getElementById('kb-answer');
     const saveKnowledgeBtn = document.getElementById('save-knowledge-btn');
@@ -1105,29 +1160,4 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Vui lòng nhập câu hỏi cho RAG', 'warning');
         }
     });
-
-    // Helper function for notifications (local to this scope)
-    function showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        
-        const icons = {
-            success: '✓',
-            error: '✗',
-            warning: '⚠',
-            info: 'ℹ'
-        };
-        
-        notification.innerHTML = `
-            <span class="notification-icon">${icons[type]}</span>
-            <span class="notification-message">${message}</span>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
 });
