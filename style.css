@@ -1009,3 +1009,9 @@ input[type="range"]::-webkit-slider-thumb {
 .setting-item:hover {
     background-color: #f8f9fa;
 }
+
+/* Reduce Animations Setting */
+.reduce-animations * {
+    transition: none !important;
+    animation: none !important;
+}

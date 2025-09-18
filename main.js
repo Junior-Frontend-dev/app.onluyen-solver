@@ -1,6 +1,7 @@
 // main.js - Main Process với Error Handling đầy đủ
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const axios = require('axios');
 const { initializeDatabase, saveKnowledge, getKnowledge, searchKnowledge } = require('./database');
 
@@ -11,6 +12,41 @@ let mainWindow;
 let devWindow;
 let popupWindow; // Cửa sổ cho control panel
 let mainWebviewContents; // Webview của cửa sổ chính
+
+// Settings Management
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+let mainSettings = {
+    autoOpenDevConsole: true,
+    screenshotQuality: 70,
+    domLimit: 100,
+    debugMode: false
+};
+
+function saveMainSettings() {
+    try {
+        fs.writeFileSync(settingsPath, JSON.stringify(mainSettings, null, 2));
+    } catch (error) {
+        console.error('Failed to save main settings:', error);
+    }
+}
+
+function loadMainSettings() {
+    try {
+        if (fs.existsSync(settingsPath)) {
+            const savedSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+            mainSettings = { ...mainSettings, ...savedSettings };
+        }
+    } catch (error) {
+        console.error('Failed to load main settings:', error);
+    }
+}
+
+ipcMain.on('update-settings', (event, settings) => {
+    console.log("Received settings update from renderer:", settings);
+    mainSettings = { ...mainSettings, ...settings };
+    saveMainSettings();
+});
+
 
 // Tạo cửa sổ Dev Console
 function createDevConsole() {
@@ -149,13 +185,16 @@ function createWindow() {
     }
   });
 
-  // Auto open dev console on start
-  createDevConsole();
+  // Auto open dev console on start based on settings
+  if (mainSettings.autoOpenDevConsole) {
+    createDevConsole();
+  }
   devLog('🚀 Ứng dụng đã khởi động thành công!', 'success');
 }
 
 // Khởi động ứng dụng
 app.whenReady().then(async () => {
+  loadMainSettings();
   await initializeDatabase();
   createWindow();
 
@@ -306,7 +345,7 @@ ipcMain.handle('capture-screenshot', async () => {
           });
           
           return {
-            elements: elements || [],
+            elements: elements.slice(0, ${mainSettings.domLimit}) || [], // Apply DOM Limit
             viewport: {
               width: window.innerWidth,
               height: window.innerHeight,
@@ -328,13 +367,15 @@ ipcMain.handle('capture-screenshot', async () => {
       })();
     `;
 
-    const [image, domData] = await Promise.all([
+    const [nativeImage, domData] = await Promise.all([
         mainWebviewContents.capturePage(),
         mainWebviewContents.executeJavaScript(getDomSnapshotScript)
     ]);
 
-    const screenshot = image.toDataURL();
-    const bounds = image.getSize();
+    // Apply Screenshot Quality
+    const jpegBuffer = nativeImage.toJPEG(mainSettings.screenshotQuality);
+    const screenshot = 'data:image/jpeg;base64,' + jpegBuffer.toString('base64');
+    const bounds = nativeImage.getSize();
     
     devLog(`✅ Chụp màn hình thành công: ${bounds.width}x${bounds.height}, DOM elements: ${domData?.elements?.length || 0}`, 'success');
     
@@ -385,7 +426,7 @@ ipcMain.handle('send-to-gemini', async (event, imageBase64, apiKey, model, custo
           },
           {
             inline_data: {
-              mime_type: "image/png",
+              mime_type: "image/jpeg", // Changed to JPEG
               data: base64Data
             }
           }
@@ -398,7 +439,7 @@ ipcMain.handle('send-to-gemini', async (event, imageBase64, apiKey, model, custo
     };
 
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      `https://generativethreelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       payload,
       {
         headers: {
@@ -441,7 +482,7 @@ ipcMain.handle('send-to-gemini-with-actions', async (event, imageBase64, apiKey,
 
     // Ensure domSnapshot is array
     const safeDomSnapshot = Array.isArray(domSnapshot) ? domSnapshot : [];
-    const limitedSnapshot = safeDomSnapshot.slice(0, 100);
+    const limitedSnapshot = safeDomSnapshot.slice(0, mainSettings.domLimit); // Apply DOM Limit
 
     const actionPrompt = `${userPrompt}Bạn là một AI trợ lý giải bài tập trên OnLuyen.vn.
 
@@ -481,7 +522,7 @@ Nếu không tìm thấy câu hỏi, trả về:
       contents: [{
         parts: [
           { text: actionPrompt },
-          { inline_data: { mime_type: "image/png", data: base64Data } }
+          { inline_data: { mime_type: "image/jpeg", data: base64Data } } // Changed to JPEG
         ]
       }],
       generationConfig: {

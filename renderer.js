@@ -794,20 +794,210 @@ QUAN TRỌNG:
     const settingsModal = document.getElementById('settings-modal');
     const closeSettingsBtn = document.getElementById('close-settings');
     const modalBackdrop = document.querySelector('.modal-backdrop');
+    const saveSettingsBtn = document.getElementById('save-settings');
+    const resetSettingsBtn = document.getElementById('reset-settings');
 
-    settingsBtn.addEventListener('click', () => {
-        settingsModal.classList.remove('hidden');
-    });
+    // Setting Elements
+    const qualitySlider = document.getElementById('screenshot-quality');
+    const qualityValue = document.getElementById('quality-value');
+    const autoDevConsoleSwitch = document.getElementById('auto-dev-console');
+    const domLimitSlider = document.getElementById('dom-limit');
+    const domValue = document.getElementById('dom-value');
+    const lazyLoadSwitch = document.getElementById('lazy-load');
+    const reduceAnimationSwitch = document.getElementById('reduce-animation');
+    const autoDelaySlider = document.getElementById('auto-delay');
+    const delayValue = document.getElementById('delay-value');
+    const enableCacheSwitch = document.getElementById('enable-cache');
+    const debugModeSwitch = document.getElementById('debug-mode');
 
-    closeSettingsBtn.addEventListener('click', () => {
+    // Stats Elements
+    const ramUsageEl = document.getElementById('ram-usage');
+    const fpsCounterEl = document.getElementById('fps-counter');
+    const actionsPerMinEl = document.getElementById('actions-per-min');
+    const cacheSizeEl = document.getElementById('cache-size');
+
+    const defaultSettings = {
+        screenshotQuality: 70,
+        autoDevConsole: true,
+        domLimit: 100,
+        lazyLoad: true,
+        reduceAnimation: false,
+        autoDelay: 500,
+        enableCache: true,
+        debugMode: false,
+    };
+
+    let appSettings = { ...defaultSettings };
+
+    function saveSettings() {
+        try {
+            localStorage.setItem('app_settings', JSON.stringify(appSettings));
+            showNotification('Cài đặt đã được lưu!', 'success');
+            // Inform the main process of settings that affect it
+            window.electronAPI.updateSettings(appSettings);
+        } catch (error) {
+            console.error("Failed to save settings:", error);
+            showNotification('Lỗi khi lưu cài đặt', 'error');
+        }
+    }
+
+    function loadSettings() {
+        try {
+            const savedSettings = localStorage.getItem('app_settings');
+            if (savedSettings) {
+                appSettings = { ...defaultSettings, ...JSON.parse(savedSettings) };
+            }
+        } catch (error) {
+            console.error("Failed to load settings:", error);
+            appSettings = { ...defaultSettings };
+        }
+        updateSettingsUI();
+        applySettings();
+    }
+
+    function updateSettingsUI() {
+        qualitySlider.value = appSettings.screenshotQuality;
+        qualityValue.textContent = `${appSettings.screenshotQuality}%`;
+        autoDevConsoleSwitch.checked = appSettings.autoDevConsole;
+        domLimitSlider.value = appSettings.domLimit;
+        domValue.textContent = appSettings.domLimit;
+        lazyLoadSwitch.checked = appSettings.lazyLoad;
+        reduceAnimationSwitch.checked = appSettings.reduceAnimation;
+        autoDelaySlider.value = appSettings.autoDelay;
+        delayValue.textContent = `${appSettings.autoDelay}ms`;
+        enableCacheSwitch.checked = appSettings.enableCache;
+        debugModeSwitch.checked = appSettings.debugMode;
+    }
+
+    function applySettings() {
+        // Apply animation setting
+        if (appSettings.reduceAnimation) {
+            document.body.classList.add('reduce-animations');
+        } else {
+            document.body.classList.remove('reduce-animations');
+        }
+        // Other settings are applied on-the-fly where they are used
+    }
+
+    // Event Listeners for Settings
+    settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    modalBackdrop.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    saveSettingsBtn.addEventListener('click', () => {
+        saveSettings();
         settingsModal.classList.add('hidden');
     });
 
-    modalBackdrop.addEventListener('click', () => {
-        settingsModal.classList.add('hidden');
+    resetSettingsBtn.addEventListener('click', () => {
+        appSettings = { ...defaultSettings };
+        updateSettingsUI();
+        applySettings();
+        saveSettings();
     });
+
+    qualitySlider.addEventListener('input', (e) => {
+        appSettings.screenshotQuality = parseInt(e.target.value, 10);
+        qualityValue.textContent = `${appSettings.screenshotQuality}%`;
+    });
+
+    autoDevConsoleSwitch.addEventListener('change', (e) => {
+        appSettings.autoDevConsole = e.target.checked;
+    });
+
+    domLimitSlider.addEventListener('input', (e) => {
+        appSettings.domLimit = parseInt(e.target.value, 10);
+        domValue.textContent = appSettings.domLimit;
+    });
+
+    lazyLoadSwitch.addEventListener('change', (e) => {
+        appSettings.lazyLoad = e.target.checked;
+        if(appSettings.lazyLoad) showNotification('Lazy Load (Conceptual): Components will load on demand.', 'info');
+    });
+
+    reduceAnimationSwitch.addEventListener('change', (e) => {
+        appSettings.reduceAnimation = e.target.checked;
+        applySettings();
+    });
+
+    autoDelaySlider.addEventListener('input', (e) => {
+        appSettings.autoDelay = parseInt(e.target.value, 10);
+        delayValue.textContent = `${appSettings.autoDelay}ms`;
+    });
+
+    enableCacheSwitch.addEventListener('change', (e) => {
+        appSettings.enableCache = e.target.checked;
+        if (!appSettings.enableCache) {
+            // Clear cache if disabled
+            // Will implement cache logic later
+        }
+    });
+
+    debugModeSwitch.addEventListener('change', (e) => {
+        appSettings.debugMode = e.target.checked;
+        showNotification(`Chế độ Debug ${appSettings.debugMode ? 'đã bật' : 'đã tắt'}.`, 'info');
+    });
+
+    // Performance Stats Update
+    setInterval(() => {
+        // RAM Usage
+        const memory = window.performance.memory;
+        if (memory) {
+            const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+            ramUsageEl.textContent = `${usedMB} MB`;
+        }
+
+        // Will implement other stats later
+    }, 2000);
+    
+    // Load settings on startup
+    loadSettings();
 
     // ============= END SETTINGS MODAL =============
+
+    // ============= CACHE & STATS =============
+    const apiResponseCache = new Map();
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let fps = 0;
+    let executedActionsCount = 0;
+    let monitoringStartTime = Date.now();
+
+    function updateFps() {
+        const now = performance.now();
+        frameCount++;
+        if (now - lastFrameTime >= 1000) {
+            fps = frameCount;
+            frameCount = 0;
+            lastFrameTime = now;
+            fpsCounterEl.textContent = fps;
+        }
+        requestAnimationFrame(updateFps);
+    }
+    requestAnimationFrame(updateFps);
+
+    // Performance Stats Update Interval
+    setInterval(() => {
+        // RAM Usage
+        const memory = window.performance.memory;
+        if (memory) {
+            const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+            ramUsageEl.textContent = `${usedMB} MB`;
+        }
+
+        // Actions per minute
+        const elapsedMinutes = (Date.now() - monitoringStartTime) / 60000;
+        if (elapsedMinutes > 0) {
+            const actionsPerMin = (executedActionsCount / elapsedMinutes).toFixed(1);
+            actionsPerMinEl.textContent = actionsPerMin;
+        }
+
+        // Cache size
+        const cacheSize = new TextEncoder().encode(JSON.stringify([...apiResponseCache])).length;
+        const cacheSizeKB = (cacheSize / 1024).toFixed(1);
+        cacheSizeEl.textContent = `${cacheSizeKB} KB`;
+
+    }, 2000);
+
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {

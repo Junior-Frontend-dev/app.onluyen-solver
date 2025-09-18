@@ -82,5 +82,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Lắng nghe sự kiện để hiện lại sidebar
   onShowSidebar: (callback) => {
     ipcRenderer.on('show-sidebar', callback);
+  },
+
+  // Gửi cài đặt tới main process
+  updateSettings: (settings) => {
+    ipcRenderer.send('update-settings', settings);
   }
 });
