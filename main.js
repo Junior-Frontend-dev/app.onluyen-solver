@@ -86,9 +86,9 @@ ipcMain.on('open-popup-window', (event) => {
 
   popupWindow.on('closed', () => {
     popupWindow = null;
-    // Khi pop-up đóng, đóng cả cửa sổ chính
+    // Khi pop-up đóng, gửi tin nhắn cho cửa sổ chính để hiện lại sidebar
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.close();
+      mainWindow.webContents.send('show-sidebar');
     }
   });
 });

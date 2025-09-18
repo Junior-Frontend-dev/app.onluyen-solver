@@ -71,6 +71,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (settingsBtn) settingsBtn.style.display = 'none';
     });
 
+    window.electronAPI.onShowSidebar(() => {
+        console.log('Showing sidebar');
+        const sidebar = document.querySelector('.sidebar');
+        const settingsBtn = document.getElementById('settings-btn');
+        if (sidebar) sidebar.classList.remove('hidden');
+        if (settingsBtn) settingsBtn.style.display = 'flex';
+    });
+
     // ============= API KEY MANAGEMENT =============
     
     // Load saved API key on startup
