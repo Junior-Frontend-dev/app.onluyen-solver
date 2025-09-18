@@ -1,11 +1,11 @@
-# OnLuyen.vn AI Assistant
+# App.OnLuyen.vn AI Assistant
 
 Một ứng dụng desktop được xây dựng bằng Electron giúp tăng cường trải nghiệm học tập trên trang web [App.onluyen.vn](https://app.onluyen.vn/) bằng cách tích hợp một trợ lý AI mạnh mẽ được cung cấp bởi Google Gemini.
 
 
 ## ✨ Tính Năng Chính
 
-- **Trình duyệt Tích hợp:** Duyệt trang `onluyen.vn` trong một ứng dụng desktop chuyên dụng với các điều khiển điều hướng cơ bản.
+- **Trình duyệt Tích hợp:** Duyệt trang `app.onluyen.vn` trong một ứng dụng desktop chuyên dụng với các điều khiển điều hướng cơ bản.
 - **Bảng điều khiển AI Assistant:** Một sidebar mạnh mẽ cho phép bạn tương tác với AI.
 - **Lấy API Key Gemini:** Dễ dàng lưu và quản lý Gemini API key của bạn.
 - **Nhiều Chế độ AI:**
@@ -101,3 +101,5 @@ Bạn có thể mở menu cài đặt bằng cách nhấp vào biểu tượng b
 - `Ctrl` + `Shift` + `I`: Mở DevTools của cửa sổ chính.
 - `Alt` + `ArrowLeft`: Quay lại trang trước.
 - `Alt` + `ArrowRight`: Tiến tới trang sau.
+## ⭐ Star history
+[![Star History Chart](https://api.star-history.com/svg?repos=Junior-Frontend-dev/app.onluyen-solver&type=Date)](https://www.star-history.com/#Junior-Frontend-dev/app.onluyen-solver&Date)
