@@ -90,15 +90,15 @@
             
             <!-- API Key Input -->
             <div class="control-group">
-                <label for="api-key">Gemini API Key:</label>
-                <input 
-                    type="password" 
+                <label for="api-key">Gemini API Keys (một key mỗi dòng):</label>
+                <textarea 
                     id="api-key" 
-                    placeholder="Nhập API Key của bạn"
-                />
+                    placeholder="Dán một hoặc nhiều API Key vào đây, mỗi key trên một dòng..."
+                    rows="4"
+                ></textarea>
                 <small>
-                    <a href="#" id="toggle-api-key" style="color: #3498db;">Hiện/Ẩn</a> |
-                    <a href="#" id="save-api-key" style="color: #27ae60;">Lưu</a>
+                    <a href="#" id="save-api-key" style="color: #27ae60;">💾 Lưu Keys</a>
+                    <span id="api-key-status" style="margin-left: 10px;"></span>
                 </small>
             </div>
 

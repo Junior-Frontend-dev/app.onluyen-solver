@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKeyInput = document.getElementById('api-key');
     const aiModelSelect = document.getElementById('ai-model');
     const customPromptInput = document.getElementById('custom-prompt');
-    const toggleApiKeyBtn = document.getElementById('toggle-api-key');
     const saveApiKeyBtn = document.getElementById('save-api-key');
+    const apiKeyStatus = document.getElementById('api-key-status');
     const screenshotContainer = document.getElementById('screenshot-container');
     const geminiResult = document.getElementById('gemini-result');
     const loading = document.getElementById('loading');
@@ -151,36 +151,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ============= API KEY MANAGEMENT =============
-    
-    // Load saved API key on startup
-    const savedApiKey = localStorage.getItem('gemini_api_key');
-    if (savedApiKey) {
-        apiKeyInput.value = savedApiKey;
-        showNotification('API Key đã được tải từ bộ nhớ', 'success');
+    let apiKeys = [];
+    let currentApiKeyIndex = 0;
+
+    function updateApiKeyStatus() {
+        if (apiKeys.length > 0) {
+            apiKeyStatus.textContent = `🔑 Key ${currentApiKeyIndex + 1} / ${apiKeys.length} đang hoạt động`;
+            apiKeyStatus.style.color = '#27ae60';
+        } else {
+            apiKeyStatus.textContent = '⚠️ Chưa có API key nào';
+            apiKeyStatus.style.color = '#e67e22';
+        }
     }
-    
-    // Save API key
+
+    function loadApiKeys() {
+        try {
+            const saved = localStorage.getItem('gemini_api_keys_data');
+            if (saved) {
+                const data = JSON.parse(saved);
+                apiKeys = data.keys || [];
+                currentApiKeyIndex = data.index || 0;
+                apiKeyInput.value = apiKeys.join('\n');
+            } else {
+                 apiKeyInput.value = localStorage.getItem('gemini_api_key') || ''; // Legacy support
+            }
+        } catch (e) {
+            console.error("Failed to load API keys:", e);
+        }
+        updateApiKeyStatus();
+    }
+
+    function saveApiKeys() {
+        const keys = apiKeyInput.value.split('\n').map(k => k.trim()).filter(k => k.length > 0);
+        apiKeys = keys;
+        currentApiKeyIndex = 0;
+        
+        try {
+            const data = { keys: apiKeys, index: currentApiKeyIndex };
+            localStorage.setItem('gemini_api_keys_data', JSON.stringify(data));
+            showNotification(`Đã lưu ${apiKeys.length} API key!`, 'success');
+        } catch (e) {
+            console.error("Failed to save API keys:", e);
+            showNotification('Lỗi khi lưu API keys', 'error');
+        }
+        updateApiKeyStatus();
+    }
+
+    // Initial load
+    loadApiKeys();
+
     saveApiKeyBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        const apiKey = apiKeyInput.value.trim();
-        if (apiKey) {
-            localStorage.setItem('gemini_api_key', apiKey);
-            showNotification('API Key đã được lưu thành công!', 'success');
-        } else {
-            showNotification('Vui lòng nhập API Key trước khi lưu', 'warning');
-        }
-    });
-
-    // Toggle hiện/ẩn API key
-    toggleApiKeyBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (apiKeyInput.type === 'password') {
-            apiKeyInput.type = 'text';
-            toggleApiKeyBtn.textContent = 'Ẩn';
-        } else {
-            apiKeyInput.type = 'password';
-            toggleApiKeyBtn.textContent = 'Hiện';
-        }
+        saveApiKeys();
     });
 
     // ============= AUTO MODE FUNCTIONS =============
@@ -465,9 +487,8 @@ QUAN TRỌNG:
             return;
         }
 
-        const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
-            showNotification('Vui lòng nhập API Key!', 'warning');
+        if (apiKeys.length === 0) {
+            showNotification('Vui lòng nhập và lưu ít nhất một API Key!', 'warning');
             apiKeyInput.focus();
             return;
         }
@@ -497,23 +518,21 @@ QUAN TRỌNG:
             const model = aiModelSelect.value;
             const customPrompt = customPromptInput.value.trim();
 
+            const payload = {
+                apiKeys,
+                startIndex: currentApiKeyIndex,
+                model,
+                customPrompt,
+                imageBase64: currentScreenshot,
+                dimensions: screenshotDimensions,
+                domSnapshot: currentDomSnapshot
+            };
+
             let result;
             if (mode === 'action' || mode === 'auto') {
-                result = await window.electronAPI.sendToGeminiWithActions(
-                    currentScreenshot,
-                    apiKey,
-                    model,
-                    customPrompt,
-                    screenshotDimensions,
-                    currentDomSnapshot
-                );
+                result = await window.electronAPI.sendToGeminiWithActions(payload);
             } else {
-                result = await window.electronAPI.sendToGemini(
-                    currentScreenshot,
-                    apiKey,
-                    model,
-                    customPrompt
-                );
+                result = await window.electronAPI.sendToGemini(payload);
             }
 
             if (result.success) {
@@ -538,6 +557,17 @@ QUAN TRỌNG:
             showLoading(false);
             captureAndSendBtn.disabled = false;
         }
+    });
+
+    // Listen for successful key updates from main process
+    window.electronAPI.onApiKeyUpdated((newIndex) => {
+        if (appSettings.debugMode) {
+            console.log(`Switching to API key index: ${newIndex}`);
+        }
+        currentApiKeyIndex = newIndex;
+        const data = { keys: apiKeys, index: currentApiKeyIndex };
+        localStorage.setItem('gemini_api_keys_data', JSON.stringify(data));
+        updateApiKeyStatus();
     });
 
     // Xử lý response có actions từ AI
