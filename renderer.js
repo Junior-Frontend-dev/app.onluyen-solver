@@ -154,7 +154,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============= API KEY MANAGEMENT =============
     let apiKeys = [];
     let currentApiKeyIndex = 0;
-    const showApiKeyCheckbox = document.getElementById('show-api-key');
+    let isApiKeyVisible = false; // Bắt đầu với key bị ẩn
+    const toggleApiKeyVisibilityBtn = document.getElementById('toggle-api-key-visibility-btn');
+    const iconEye = toggleApiKeyVisibilityBtn.querySelector('.icon-eye');
+    const iconEyeOff = toggleApiKeyVisibilityBtn.querySelector('.icon-eye-off');
 
     function updateApiKeyStatus() {
         if (apiKeys.length > 0) {
@@ -167,10 +170,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateApiKeyVisibility() {
-        if (showApiKeyCheckbox.checked) {
+        if (isApiKeyVisible) {
             apiKeyInput.value = apiKeys.join('\n');
+            apiKeyInput.style.webkitTextSecurity = 'none';
+            iconEye.classList.add('hidden');
+            iconEyeOff.classList.remove('hidden');
         } else {
             apiKeyInput.value = apiKeys.map((key, index) => `•••••••••••••••••••••••• (Key ${index + 1})`).join('\n');
+            apiKeyInput.style.webkitTextSecurity = 'disc';
+            iconEye.classList.remove('hidden');
+            iconEyeOff.classList.add('hidden');
         }
     }
 
@@ -193,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveApiKeys() {
-        if (showApiKeyCheckbox.checked) {
+        if (isApiKeyVisible) {
             const keysFromTextarea = apiKeyInput.value.split('\n').map(k => k.trim()).filter(k => k.length > 0);
             apiKeys = keysFromTextarea;
         }
@@ -209,7 +218,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Lỗi khi lưu API keys', 'error');
         }
         updateApiKeyStatus();
-        updateApiKeyVisibility();
+        if (!isApiKeyVisible) {
+            updateApiKeyVisibility();
+        }
     }
 
     // Initial load
@@ -220,12 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
         saveApiKeys();
     });
 
-    showApiKeyCheckbox.addEventListener('change', () => {
+    toggleApiKeyVisibilityBtn.addEventListener('click', () => {
+        isApiKeyVisible = !isApiKeyVisible;
         updateApiKeyVisibility();
     });
 
     apiKeyInput.addEventListener('input', () => {
-        if (showApiKeyCheckbox.checked) {
+        if (isApiKeyVisible) {
             apiKeys = apiKeyInput.value.split('\n').map(k => k.trim()).filter(k => k.length > 0);
         }
     });
@@ -233,8 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============= AUTO MODE FUNCTIONS =============
     
     async function startAutoMode() {
-        const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
+        if (apiKeys.length === 0) {
             showNotification('Vui lòng nhập API Key để sử dụng chế độ tự động!', 'warning');
             return;
         }
@@ -276,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const screenshotResult = await window.electronAPI.captureScreenshot();
             
             if (!screenshotResult.success) {
-                throw new Error('Không thể chụp màn hình');
+                throw new Error(screenshotResult.error || 'Không thể chụp màn hình');
             }
             
             currentScreenshot = screenshotResult.data;
@@ -308,14 +319,17 @@ QUAN TRỌNG:
 - Ưu tiên độ chính xác cao nhất
 - Nếu không tìm thấy câu hỏi nào, trả về actions rỗng[]`;
 
-            const aiResult = await window.electronAPI.sendToGeminiWithActions(
-                currentScreenshot, 
-                apiKeyInput.value.trim(), 
-                model, 
-                autoPrompt, 
-                screenshotDimensions, 
-                currentDomSnapshot
-            );
+            const payload = {
+                apiKeys,
+                startIndex: currentApiKeyIndex,
+                model,
+                customPrompt: autoPrompt,
+                imageBase64: currentScreenshot,
+                dimensions: screenshotDimensions,
+                domSnapshot: currentDomSnapshot
+            };
+
+            const aiResult = await window.electronAPI.sendToGeminiWithActions(payload);
             
             if (!aiResult.success) {
                 throw new Error(aiResult.error);
@@ -917,8 +931,12 @@ QUAN TRỌNG:
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // Make performance indicator draggable
     const perfIndicator = document.getElementById('performance-indicator');
+    const closePerfIndicatorBtn = document.getElementById('close-perf-indicator');
+    const condensedPerfIndicator = document.getElementById('perf-indicator-condensed');
+    const condensedPerfDot = condensedPerfIndicator.querySelector('.perf-dot');
+
+    // Make performance indicator draggable
     perfIndicator.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', null);
         e.target.style.opacity = '0.5';
@@ -929,6 +947,27 @@ QUAN TRỌNG:
         perfIndicator.style.left = `${e.clientX}px`;
         perfIndicator.style.top = `${e.clientY}px`;
     });
+
+    // --- Performance Indicator Visibility --- 
+    function setPerfIndicatorVisibility(visible) {
+        if (visible) {
+            perfIndicator.classList.remove('hidden');
+            condensedPerfIndicator.classList.add('hidden');
+            localStorage.setItem('perfIndicatorVisible', 'true');
+        } else {
+            perfIndicator.classList.add('hidden');
+            condensedPerfIndicator.classList.remove('hidden');
+            localStorage.setItem('perfIndicatorVisible', 'false');
+        }
+    }
+
+    closePerfIndicatorBtn.addEventListener('click', () => setPerfIndicatorVisibility(false));
+    condensedPerfIndicator.addEventListener('click', () => setPerfIndicatorVisibility(true));
+
+    // Load initial state
+    const isPerfIndicatorVisible = localStorage.getItem('perfIndicatorVisible') !== 'false';
+    setPerfIndicatorVisibility(isPerfIndicatorVisible);
+
 
     document.body.addEventListener("dragover", e => {
         e.preventDefault();

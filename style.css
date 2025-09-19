@@ -254,6 +254,28 @@ body {
     margin-top: 5px;
     font-size: 12px;
     color: #666;
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Vertically align items */
+}
+
+.key-toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 5px;
+    margin-left: 15px; /* Add some space */
+    color: #667eea;
+    display: flex;
+    align-items: center;
+}
+
+.key-toggle-btn:hover {
+    opacity: 0.7;
+}
+
+.key-toggle-btn .icon-eye-off.hidden,
+.key-toggle-btn .icon-eye.hidden {
+    display: none;
 }
 
 /* Mode Selection */
@@ -965,8 +987,8 @@ input[type="range"]::-webkit-slider-thumb {
 /* Performance Indicator */
 .performance-indicator {
     position: fixed;
-    top: 10px;
-    right: 20px;
+    bottom: 20px; /* Changed from top */
+    left: 20px;  /* Added */
     padding: 8px 15px;
     background-color: rgba(0, 0, 0, 0.7);
     color: white;
@@ -980,6 +1002,52 @@ input[type="range"]::-webkit-slider-thumb {
     transition: all 0.3s ease;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
+
+.performance-indicator.hidden {
+    display: none;
+}
+
+.perf-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+    margin-left: 5px;
+}
+
+.perf-close-btn:hover {
+    opacity: 0.7;
+}
+
+.perf-indicator-condensed {
+    padding: 0 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.perf-indicator-condensed.hidden {
+    display: none;
+}
+
+.perf-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.perf-dot:hover {
+    transform: scale(1.2);
+}
+
+.perf-dot.good { background-color: #2ecc71; }
+.perf-dot.medium { background-color: #f1c40f; }
+.perf-dot.bad { background-color: #e74c3c; }
+
 
 .performance-indicator::before {
     content: '';
