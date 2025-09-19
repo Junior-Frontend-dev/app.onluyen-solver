@@ -20,6 +20,7 @@ const defaultSettings = {
     enableCache: true,
     debugMode: false,
     disableNotifications: false,
+    outputLanguage: 'Tiếng Việt',
 };
 
 let appSettings = { ...defaultSettings };
@@ -153,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============= API KEY MANAGEMENT =============
     let apiKeys = [];
     let currentApiKeyIndex = 0;
+    const showApiKeyCheckbox = document.getElementById('show-api-key');
 
     function updateApiKeyStatus() {
         if (apiKeys.length > 0) {
@@ -164,6 +166,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function updateApiKeyVisibility() {
+        if (showApiKeyCheckbox.checked) {
+            apiKeyInput.value = apiKeys.join('\n');
+        } else {
+            apiKeyInput.value = apiKeys.map((key, index) => `•••••••••••••••••••••••• (Key ${index + 1})`).join('\n');
+        }
+    }
+
     function loadApiKeys() {
         try {
             const saved = localStorage.getItem('gemini_api_keys_data');
@@ -171,19 +181,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = JSON.parse(saved);
                 apiKeys = data.keys || [];
                 currentApiKeyIndex = data.index || 0;
-                apiKeyInput.value = apiKeys.join('\n');
             } else {
-                 apiKeyInput.value = localStorage.getItem('gemini_api_key') || ''; // Legacy support
+                 const legacyKeys = localStorage.getItem('gemini_api_key') || ''; // Legacy support
+                 if (legacyKeys) apiKeys = legacyKeys.split('\n').map(k => k.trim()).filter(Boolean);
             }
         } catch (e) {
             console.error("Failed to load API keys:", e);
         }
+        updateApiKeyVisibility();
         updateApiKeyStatus();
     }
 
     function saveApiKeys() {
-        const keys = apiKeyInput.value.split('\n').map(k => k.trim()).filter(k => k.length > 0);
-        apiKeys = keys;
+        if (showApiKeyCheckbox.checked) {
+            const keysFromTextarea = apiKeyInput.value.split('\n').map(k => k.trim()).filter(k => k.length > 0);
+            apiKeys = keysFromTextarea;
+        }
+
         currentApiKeyIndex = 0;
         
         try {
@@ -195,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Lỗi khi lưu API keys', 'error');
         }
         updateApiKeyStatus();
+        updateApiKeyVisibility();
     }
 
     // Initial load
@@ -203,6 +218,16 @@ document.addEventListener('DOMContentLoaded', () => {
     saveApiKeyBtn.addEventListener('click', (e) => {
         e.preventDefault();
         saveApiKeys();
+    });
+
+    showApiKeyCheckbox.addEventListener('change', () => {
+        updateApiKeyVisibility();
+    });
+
+    apiKeyInput.addEventListener('input', () => {
+        if (showApiKeyCheckbox.checked) {
+            apiKeys = apiKeyInput.value.split('\n').map(k => k.trim()).filter(k => k.length > 0);
+        }
     });
 
     // ============= AUTO MODE FUNCTIONS =============
@@ -951,6 +976,7 @@ QUAN TRỌNG:
         enableCacheSwitch.checked = appSettings.enableCache;
         debugModeSwitch.checked = appSettings.debugMode;
         disableNotificationsSwitch.checked = appSettings.disableNotifications;
+        document.getElementById('output-language').value = appSettings.outputLanguage || 'Tiếng Việt';
     }
 
     function applySettings() {
@@ -1023,6 +1049,10 @@ QUAN TRỌNG:
 
     disableNotificationsSwitch.addEventListener('change', (e) => {
         appSettings.disableNotifications = e.target.checked;
+    });
+
+    document.getElementById('output-language').addEventListener('input', (e) => {
+        appSettings.outputLanguage = e.target.value;
     });
 
     // Performance Stats Update

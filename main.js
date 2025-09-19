@@ -19,7 +19,8 @@ let mainSettings = {
     autoOpenDevConsole: true,
     screenshotQuality: 70,
     domLimit: 100,
-    debugMode: false
+    debugMode: false,
+    outputLanguage: 'Tiếng Việt'
 };
 
 function saveMainSettings() {
@@ -197,6 +198,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('save-knowledge', async (event, question, answer) => await saveKnowledge(question, answer));
   ipcMain.handle('get-knowledge', async () => await getKnowledge());
   ipcMain.handle('search-knowledge', async (event, query) => await searchKnowledge(query));
+  ipcMain.handle('get-settings', () => mainSettings);
   ipcMain.handle('rag-query', async (event, userQuery) => {
     const relevantKnowledge = await searchKnowledge(userQuery);
     let prompt = `User query: "${userQuery}"\n\n`;
@@ -262,7 +264,7 @@ ipcMain.handle('send-to-gemini', async (event, payload) => {
     try {
       devLog(`📤 Gửi request tới Gemini (Analyze) với Key #${currentIndex + 1}`, 'info');
       const base64Data = imageBase64.replace(/^data:image\/[\w]+;base64,/, '');
-      const systemPrompt = `Bạn là một trợ lý AI chuyên giải bài tập và hỗ trợ học tập trên nền tảng OnLuyen.vn. FORMAT TRẢ LỜI: 📌 **Đáp án đúng: [Chữ cái hoặc đáp án]** 📝 **Giải thích:** [Giải thích chi tiết]`;
+      const systemPrompt = `Bạn là một trợ lý AI chuyên giải bài tập và hỗ trợ học tập trên nền tảng OnLuyen.vn. FORMAT TRẢ LỜI: 📌 **Đáp án đúng: [Chữ cái hoặc đáp án]** 📝 **Giải thích:** [Giải thích chi tiết]. Luôn trả lời bằng ngôn ngữ: ${mainSettings.outputLanguage || 'Tiếng Việt'}`;
       const userPrompt = customPrompt || 'Hãy phân tích và giải quyết bài tập trong ảnh này.';
       const fullPrompt = `${systemPrompt}\n\n---\n\n**YÊU CẦU HIỆN TẠI:**\n${userPrompt}`;
       const requestPayload = { contents: [{ parts: [ { text: fullPrompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } } ] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } };
@@ -303,8 +305,7 @@ ipcMain.handle('send-to-gemini-with-actions', async (event, payload) => {
             const userPrompt = customPrompt ? `**Yêu cầu từ người dùng:** ${customPrompt}\n\n---\n\n` : '';
             const safeDomSnapshot = Array.isArray(domSnapshot) ? domSnapshot : [];
             const limitedSnapshot = safeDomSnapshot.slice(0, mainSettings.domLimit);
-            const actionPrompt = `${userPrompt}Bạn là một AI trợ lý giải bài tập trên OnLuyen.vn.\n\n**BỐI CẢNH:**\n1. Ảnh màn hình: ${dimensions?.width || 0}x${dimensions?.height || 0} pixels\n2. DOM elements (${limitedSnapshot.length} elements):\n${JSON.stringify(limitedSnapshot, null, 2)}\n\n**NHIỆM VỤ:**\nPhân tích và tạo actions để giải bài tập.\n\n**QUAN TRỌNG - TRẢ VỀ JSON ĐÚNG FORMAT:**\n{\n  "analysis": "Mô tả phân tích",\n  "actions": [ { "type": "click", "ai_id": [number], "description": "..." } ]
-}`;
+            const actionPrompt = `${userPrompt}Bạn là một AI trợ lý giải bài tập trên OnLuyen.vn.\n\n**BỐI CẢNH:**\n1. Ảnh màn hình: ${dimensions?.width || 0}x${dimensions?.height || 0} pixels\n2. DOM elements (${limitedSnapshot.length} elements):\n${JSON.stringify(limitedSnapshot, null, 2)}\n\n**NHIỆM VỤ:**\nPhân tích và tạo actions để giải bài tập.\n\n**QUAN TRỌNG - TRẢ VỀ JSON ĐÚNG FORMAT:**\n{\n  "analysis": "Mô tả phân tích (bằng ngôn ngữ ${mainSettings.outputLanguage || 'Tiếng Việt'})",\n  "actions": [ { "type": "click", "ai_id": [number], "description": "..." } ]\n}`;
             const requestPayload = { contents: [{ parts: [ { text: actionPrompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } } ] }], generationConfig: { temperature: 0.1, maxOutputTokens: 4096 } };
             const response = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentApiKey}`, requestPayload, { headers: { 'Content-Type': 'application/json' }, timeout: 30000 });
 
@@ -355,12 +356,15 @@ ipcMain.handle('perform-type', async (event, text, x, y) => {
     }
     mainWebviewContents.sendInputEvent({ type: 'keyDown', keyCode: 'a', modifiers: ['control'] });
     await new Promise(resolve => setTimeout(resolve, 50));
+    mainWebviewContents.sendInputEvent({ type: 'keyUp', keyCode: 'a', modifiers: ['control'] });
+    await new Promise(resolve => setTimeout(resolve, 50));
     mainWebviewContents.sendInputEvent({ type: 'keyDown', keyCode: 'Delete' });
     await new Promise(resolve => setTimeout(resolve, 50));
-    for (const char of text.toString()) {
-      mainWebviewContents.sendInputEvent({ type: 'char', keyCode: char });
-      await new Promise(resolve => setTimeout(resolve, 20));
-    }
+    mainWebviewContents.sendInputEvent({ type: 'keyUp', keyCode: 'Delete' });
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    mainWebviewContents.insertText(text.toString());
+    await new Promise(resolve => setTimeout(resolve, 20));
     devLog(`✅ Đã nhập xong: "${text}"`, 'success');
     return { success: true };
   } catch (error) {

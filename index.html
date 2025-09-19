@@ -99,6 +99,10 @@
                 <small>
                     <a href="#" id="save-api-key" style="color: #27ae60;">💾 Lưu Keys</a>
                     <span id="api-key-status" style="margin-left: 10px;"></span>
+                    <label style="margin-left: 20px;">
+                        <input type="checkbox" id="show-api-key">
+                        Hiện Key
+                    </label>
                 </small>
             </div>
 
@@ -394,6 +398,17 @@
                                 <input type="checkbox" id="debug-mode">
                                 <span class="slider"></span>
                             </label>
+                        </div>
+                    </div>
+
+                    <!-- Output Language -->
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label for="output-language">🌐 Output Language</label>
+                            <small>Ngôn ngữ cho câu trả lời của AI</small>
+                        </div>
+                        <div class="setting-control">
+                            <input type="text" id="output-language" value="Tiếng Việt">
                         </div>
                     </div>
                 </div>

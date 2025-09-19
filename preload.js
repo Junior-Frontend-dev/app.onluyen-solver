@@ -89,6 +89,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('update-settings', settings);
   },
 
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+
   // Lắng nghe sự kiện key được cập nhật
   onApiKeyUpdated: (callback) => {
     ipcRenderer.on('api-key-updated', (event, newIndex) => callback(newIndex));

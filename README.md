@@ -2,17 +2,24 @@
 
 Một ứng dụng desktop được xây dựng bằng Electron giúp tăng cường trải nghiệm học tập trên trang web [App.onluyen.vn](https://app.onluyen.vn/) bằng cách tích hợp một trợ lý AI mạnh mẽ được cung cấp bởi Google Gemini.
 
+## ✨ Cập nhật mới (Tháng 9, 2025)
+
+- **Chọn Ngôn ngữ Đầu ra:** Giờ đây, bạn có thể chỉ định ngôn ngữ mà AI sẽ sử dụng để trả lời trong menu Cài đặt.
+- **Hiện/Ẩn API Key:** Thêm tùy chọn để hiện hoặc ẩn các API key của bạn để tăng cường bảo mật.
+- **Sửa lỗi:** Đã khắc phục sự cố khiến ký tự đầu tiên bị mất khi AI thực hiện hành động "type".
+
 ## ✨ Tính Năng Chính
 
 - **Trình duyệt Tích hợp:** Duyệt trang `onluyen.vn` trong một ứng dụng desktop chuyên dụng với các điều khiển điều hướng cơ bản.
 - **Bảng điều khiển AI Assistant:** Một sidebar mạnh mẽ cho phép bạn tương tác với AI.
-- **Lấy API Key Gemini:** Dễ dàng lưu và quản lý Gemini API key của bạn.
+- **Quản lý API Key Gemini:** Dễ dàng lưu và quản lý nhiều Gemini API key. Hỗ trợ tùy chọn **hiện/ẩn key** để bảo mật.
 - **Nhiều Chế độ AI:**
   - **📊 Phân tích:** Chụp ảnh màn hình và gửi cho AI để nhận giải thích chi tiết và đáp án cho các bài tập.
   - **🎯 Thực hiện hành động:** Để AI phân tích màn hình và đề xuất một chuỗi các hành động (ví dụ: "click vào đáp án A", "nhập '123' vào ô trả lời") mà bạn có thể thực hiện từng bước hoặc tất cả cùng một lúc.
   - **🔄 Tự động:** Chế độ tự động hoàn toàn, trong đó AI sẽ tự động phân tích, giải và thực hiện các hành động cho tất cả các bài tập trên trang.
 - **Cửa sổ Pop-out:** Tách bảng điều khiển AI ra một cửa sổ riêng để quản lý không gian làm việc tốt hơn.
 - **Cài đặt Tùy chỉnh:**
+  - **Ngôn ngữ Đầu ra:** Tùy chỉnh ngôn ngữ phản hồi của AI.
   - Tinh chỉnh hiệu suất với các cài đặt chất lượng ảnh chụp, giới hạn phần tử DOM và thời gian trễ.
   - Bật/tắt các tính năng như tự động mở Dev Console, giảm hiệu ứng và bộ nhớ đệm phản hồi.
   - Tắt thông báo pop-up.
@@ -90,6 +97,7 @@ Bạn có thể mở menu cài đặt bằng cách nhấp vào biểu tượng b
 - **Auto Mode Delay:** Đặt thời gian chờ (tính bằng mili giây) giữa mỗi hành động trong chế độ Tự động.
 - **Enable Response Cache:** Lưu trữ các phản hồi API để tránh gửi lại các yêu cầu giống hệt nhau.
 - **Debug Mode:** Hiển thị thêm log chi tiết cho việc gỡ lỗi.
+- **Ngôn ngữ Đầu ra:** Đặt ngôn ngữ mong muốn cho các câu trả lời của AI.
 
 ## ⌨️ Phím tắt
 
