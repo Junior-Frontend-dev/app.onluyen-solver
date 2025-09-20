@@ -10,6 +10,9 @@ let screenshotDimensions = null;
 let isAutoModeActive = false;
 let autoModeInterval = null;
 let antiTrackingEnabled = false;
+let fakeEventEnabled = false;
+let webviewReady = false;
+let pendingInjections = [];
 
 const defaultSettings = {
     screenshotQuality: 70,
@@ -52,6 +55,66 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Hàm inject script an toàn
+async function safeInjectScript(script, description = 'script') {
+    if (!webviewReady) {
+        console.log(`Webview not ready, queuing ${description}`);
+        pendingInjections.push({ script, description });
+        return false;
+    }
+    
+    try {
+        const webview = document.getElementById('onluyen-webview');
+        if (!webview) {
+            console.error('Webview element not found');
+            return false;
+        }
+        
+        // Wrap script trong try-catch
+        const safeScript = `
+            (function() {
+                try {
+                    ${script}
+                } catch(error) {
+                    console.error('Script injection error:', error);
+                    return { success: false, error: error.message };
+                }
+                return { success: true };
+            })();
+        `;
+        
+        const result = await webview.executeJavaScript(safeScript);
+        if (result && result.success) {
+            console.log(`✅ Successfully injected ${description}`);
+            return true;
+        } else {
+            console.error(`Failed to inject ${description}:`, result?.error);
+            return false;
+        }
+    } catch (error) {
+        console.error(`Error injecting ${description}:`, error);
+        return false;
+    }
+}
+
+// Xử lý pending injections
+async function processPendingInjections() {
+    if (pendingInjections.length === 0) return;
+    
+    console.log(`Processing ${pendingInjections.length} pending injections...`);
+    const pending = [...pendingInjections];
+    pendingInjections = [];
+    
+    for (const { script, description } of pending) {
+        await safeInjectScript(script, description);
+        await sleep(100); // Small delay between injections
+    }
+}
+
 // Đợi DOM load xong
 document.addEventListener('DOMContentLoaded', () => {
     // Get all DOM elements
@@ -84,6 +147,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const antiTrackingToggle = document.getElementById('anti-tracking-toggle');
     const activityLevelSelect = document.getElementById('activity-level');
 
+    // Fake Event elements
+    const fakeEventToggle = document.getElementById('fake-event-toggle');
+    const fakeEventUsername = document.getElementById('fake-event-username');
+    const fakeEventInterval = document.getElementById('fake-event-interval');
+    const fakeEventAutoMode = document.getElementById('fake-event-auto-mode');
+    const toggleAdvancedBtn = document.getElementById('toggle-fake-event-advanced');
+    const fakeEventAdvanced = document.getElementById('fake-event-advanced');
+    const fakeEventTestId = document.getElementById('fake-event-test-id');
+    const fakeEventExamId = document.getElementById('fake-event-exam-id');
+    const fakeEventUserId = document.getElementById('fake-event-user-id');
+
     // Setting Elements
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
@@ -114,7 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const perfIndicator = document.getElementById('performance-indicator');
     const closePerfIndicatorBtn = document.getElementById('close-perf-indicator');
     const condensedPerfIndicator = document.getElementById('perf-indicator-condensed');
-    const condensedPerfDot = condensedPerfIndicator.querySelector('.perf-dot');
 
     // Knowledge Base
     const kbQuestionInput = document.getElementById('kb-question');
@@ -146,49 +219,60 @@ document.addEventListener('DOMContentLoaded', () => {
     async function enableAntiTracking() {
         const activityLevel = activityLevelSelect.value;
         
-        if (webview && webview.getWebContentsId) {
-            try {
-                const scriptResult = await window.electronAPI.readAntiTrackingScript();
-                
-                if (scriptResult.success) {
-                    await webview.executeJavaScript(scriptResult.script);
-                    console.log('✅ Anti-tracking injected successfully');
-                    showNotification('🛡️ Chế độ Không Theo Dõi đã được kích hoạt', 'success');
-                    
-                    await webview.executeJavaScript(`
-                        if (window.__antiTracking) {
-                            window.__antiTracking.setActivityLevel('${activityLevel}');
-                        }
-                    `);
-                } else {
-                    throw new Error(scriptResult.error);
-                }
-            } catch (err) {
-                console.error('Failed to inject anti-tracking:', err);
-                showNotification('❌ Lỗi khi kích hoạt chế độ Không Theo Dõi', 'error');
-                return;
+        try {
+            const scriptResult = await window.electronAPI.readAntiTrackingScript();
+            
+            if (!scriptResult.success) {
+                throw new Error(scriptResult.error);
             }
+            
+            // Inject script an toàn
+            const injected = await safeInjectScript(scriptResult.script, 'anti-tracking');
+            
+            if (injected) {
+                // Set activity level
+                const configScript = `
+                    if (typeof window.__antiTracking !== 'undefined' && window.__antiTracking) {
+                        window.__antiTracking.setActivityLevel('${activityLevel}');
+                        true;
+                    } else {
+                        console.warn('Anti-tracking not initialized');
+                        false;
+                    }
+                `;
+                
+                await safeInjectScript(configScript, 'anti-tracking config');
+                
+                showNotification('🛡️ Chế độ Không Theo Dõi đã được kích hoạt', 'success');
+                antiTrackingEnabled = true;
+                localStorage.setItem('antiTrackingEnabled', 'true');
+                window.electronAPI.updateAntiTracking({ enabled: true, activityLevel });
+            } else {
+                throw new Error('Failed to inject anti-tracking script');
+            }
+        } catch (err) {
+            console.error('Failed to enable anti-tracking:', err);
+            showNotification('❌ Lỗi khi kích hoạt chế độ Không Theo Dõi', 'error');
+            antiTrackingToggle.checked = false;
         }
-        
-        antiTrackingEnabled = true;
-        localStorage.setItem('antiTrackingEnabled', 'true');
-        window.electronAPI.updateAntiTracking({ enabled: true, activityLevel });
     }
 
     async function disableAntiTracking() {
-        if (webview && webview.getWebContentsId) {
-            try {
-                await webview.executeJavaScript(`
-                    if (window.__antiTracking) {
-                        window.__antiTracking.stop();
-                        window.__antiTrackingActive = false;
-                    }
-                `);
-                console.log('✅ Anti-tracking disabled');
-                showNotification('🛡️ Chế độ Không Theo Dõi đã tắt', 'info');
-            } catch (err) {
-                console.error('Failed to disable anti-tracking:', err);
+        const disableScript = `
+            if (typeof window.__antiTracking !== 'undefined' && window.__antiTracking) {
+                window.__antiTracking.stop();
+                window.__antiTrackingActive = false;
+                true;
+            } else {
+                false;
             }
+        `;
+        
+        const disabled = await safeInjectScript(disableScript, 'disable anti-tracking');
+        
+        if (disabled) {
+            console.log('✅ Anti-tracking disabled');
+            showNotification('🛡️ Chế độ Không Theo Dõi đã tắt', 'info');
         }
         
         antiTrackingEnabled = false;
@@ -207,27 +291,289 @@ document.addEventListener('DOMContentLoaded', () => {
     activityLevelSelect.addEventListener('change', async (e) => {
         localStorage.setItem('antiTrackingLevel', e.target.value);
         
-        if (antiTrackingEnabled) {
-            if (webview) {
-                try {
-                    await webview.executeJavaScript(`
-                        if (window.__antiTracking) {
-                            window.__antiTracking.setActivityLevel('${e.target.value}');
-                        }
-                    `);
-                    showNotification(`📊 Mức độ hoạt động: ${e.target.options[e.target.selectedIndex].text}`, 'info');
-                    window.electronAPI.updateAntiTracking({ 
-                        enabled: true, 
-                        activityLevel: e.target.value 
-                    });
-                } catch (err) {
-                    console.error('Failed to update activity level:', err);
+        if (antiTrackingEnabled && webviewReady) {
+            const script = `
+                if (typeof window.__antiTracking !== 'undefined' && window.__antiTracking) {
+                    window.__antiTracking.setActivityLevel('${e.target.value}');
+                    true;
+                } else {
+                    false;
                 }
+            `;
+            
+            const updated = await safeInjectScript(script, 'update activity level');
+            if (updated) {
+                showNotification(`📊 Mức độ hoạt động: ${e.target.options[e.target.selectedIndex].text}`, 'info');
+                window.electronAPI.updateAntiTracking({ 
+                    enabled: true, 
+                    activityLevel: e.target.value 
+                });
             }
         }
     });
 
     loadAntiTrackingState();
+
+    // ============= FAKE EVENT CONTROL =============
+    
+    function loadFakeEventState() {
+        const savedState = localStorage.getItem('fakeEventEnabled');
+        const savedUsername = localStorage.getItem('fakeEventUsername');
+        const savedInterval = localStorage.getItem('fakeEventInterval');
+        const savedAutoMode = localStorage.getItem('fakeEventAutoMode');
+        const savedTestId = localStorage.getItem('fakeEventTestId');
+        const savedExamId = localStorage.getItem('fakeEventExamId');
+        const savedUserId = localStorage.getItem('fakeEventUserId');
+        
+        if (savedState !== null) {
+            fakeEventEnabled = savedState === 'true';
+            fakeEventToggle.checked = fakeEventEnabled;
+        }
+        
+        if (savedUsername) {
+            fakeEventUsername.value = savedUsername;
+            validateUsername(savedUsername);
+        }
+        
+        if (savedInterval) {
+            fakeEventInterval.value = savedInterval;
+        }
+        
+        if (savedAutoMode !== null) {
+            fakeEventAutoMode.checked = savedAutoMode === 'true';
+        }
+        
+        if (savedTestId) fakeEventTestId.value = savedTestId;
+        if (savedExamId) fakeEventExamId.value = savedExamId;
+        if (savedUserId) fakeEventUserId.value = savedUserId;
+    }
+
+    function validateUsername(username) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const eduVnRegex = /@.*\.edu\.vn$/;
+        
+        if (!username) {
+            fakeEventUsername.classList.remove('valid', 'invalid');
+            return false;
+        }
+        
+        if (emailRegex.test(username)) {
+            fakeEventUsername.classList.add('valid');
+            fakeEventUsername.classList.remove('invalid');
+            
+            if (!eduVnRegex.test(username)) {
+                showNotification('⚠️ Khuyến nghị sử dụng email .edu.vn', 'warning');
+            }
+            return true;
+        } else {
+            fakeEventUsername.classList.add('invalid');
+            fakeEventUsername.classList.remove('valid');
+            return false;
+        }
+    }
+
+    async function enableFakeEvents() {
+        const username = fakeEventUsername.value.trim();
+        
+        if (!username) {
+            showNotification('❌ Vui lòng nhập email người dùng', 'error');
+            fakeEventToggle.checked = false;
+            fakeEventUsername.focus();
+            return;
+        }
+        
+        if (!validateUsername(username)) {
+            showNotification('❌ Email không hợp lệ', 'error');
+            fakeEventToggle.checked = false;
+            return;
+        }
+        
+        const interval = parseInt(fakeEventInterval.value);
+        const autoMode = fakeEventAutoMode.checked;
+        const testId = fakeEventTestId.value.trim();
+        const examId = fakeEventExamId.value.trim();
+        const userId = fakeEventUserId.value.trim();
+        
+        try {
+            const scriptResult = await window.electronAPI.readFakeEventScript();
+            
+            if (!scriptResult.success) {
+                throw new Error(scriptResult.error);
+            }
+            
+            // Inject script an toàn
+            const injected = await safeInjectScript(scriptResult.script, 'fake-event');
+            
+            if (injected) {
+                // Configure fake events
+                const config = {
+                    enabled: true,
+                    userName: username,
+                    interval: interval,
+                    autoMode: autoMode,
+                    testId: testId,
+                    examId: examId,
+                    userId: userId,
+                    keyExam: examId ? `${examId}_false` : ''
+                };
+                
+                const configScript = `
+                    if (typeof window.__fakeEvent !== 'undefined' && window.__fakeEvent) {
+                        window.__fakeEvent.updateConfig(${JSON.stringify(config)});
+                        true;
+                    } else {
+                        console.warn('Fake event not initialized');
+                        false;
+                    }
+                `;
+                
+                await safeInjectScript(configScript, 'fake-event config');
+                
+                showNotification(`🎭 Fake Event đã bật cho: ${username}`, 'success');
+                const intervalText = fakeEventInterval.options[fakeEventInterval.selectedIndex].text;
+                showNotification(`⏰ Gửi event ${intervalText.toLowerCase()}`, 'info');
+                
+                fakeEventEnabled = true;
+                localStorage.setItem('fakeEventEnabled', 'true');
+                localStorage.setItem('fakeEventUsername', username);
+                localStorage.setItem('fakeEventInterval', interval);
+                localStorage.setItem('fakeEventAutoMode', autoMode);
+                localStorage.setItem('fakeEventTestId', testId);
+                localStorage.setItem('fakeEventExamId', examId);
+                localStorage.setItem('fakeEventUserId', userId);
+            } else {
+                throw new Error('Failed to inject fake-event script');
+            }
+        } catch (err) {
+            console.error('Failed to enable fake events:', err);
+            showNotification('❌ Lỗi khi kích hoạt Fake Event', 'error');
+            fakeEventToggle.checked = false;
+        }
+    }
+
+    async function disableFakeEvents() {
+        const disableScript = `
+            if (typeof window.__fakeEvent !== 'undefined' && window.__fakeEvent) {
+                window.__fakeEvent.disable();
+                true;
+            } else {
+                false;
+            }
+        `;
+        
+        const disabled = await safeInjectScript(disableScript, 'disable fake-event');
+        
+        if (disabled) {
+            console.log('✅ Fake events disabled');
+            showNotification('🎭 Fake Event đã tắt', 'info');
+        }
+        
+        fakeEventEnabled = false;
+        localStorage.setItem('fakeEventEnabled', 'false');
+    }
+
+    fakeEventToggle.addEventListener('change', async (e) => {
+        if (e.target.checked) {
+            await enableFakeEvents();
+        } else {
+            await disableFakeEvents();
+        }
+    });
+
+    fakeEventUsername.addEventListener('input', (e) => {
+        validateUsername(e.target.value);
+    });
+
+    fakeEventUsername.addEventListener('blur', (e) => {
+        const username = e.target.value.trim();
+        
+        if (username && !username.includes('@')) {
+            const autoUsername = username + '@haiphong.edu.vn';
+            e.target.value = autoUsername;
+            validateUsername(autoUsername);
+            showNotification(`📧 Tự động thêm domain: ${autoUsername}`, 'info');
+        }
+    });
+
+    fakeEventInterval.addEventListener('change', async (e) => {
+        const interval = parseInt(e.target.value);
+        localStorage.setItem('fakeEventInterval', interval);
+        
+        if (fakeEventEnabled && webviewReady) {
+            const script = `
+                if (typeof window.__fakeEvent !== 'undefined' && window.__fakeEvent) {
+                    window.__fakeEvent.setInterval(${interval});
+                    true;
+                } else {
+                    false;
+                }
+            `;
+            
+            const updated = await safeInjectScript(script, 'update fake event interval');
+            if (updated) {
+                const intervalText = e.target.options[e.target.selectedIndex].text;
+                showNotification(`⏰ Đã đổi interval: ${intervalText.toLowerCase()}`, 'info');
+            }
+        }
+    });
+
+    fakeEventAutoMode.addEventListener('change', async (e) => {
+        const autoMode = e.target.checked;
+        localStorage.setItem('fakeEventAutoMode', autoMode);
+        
+        if (fakeEventEnabled && webviewReady) {
+            const script = `
+                if (typeof window.__fakeEvent !== 'undefined' && window.__fakeEvent) {
+                    window.__fakeEvent.setAutoMode(${autoMode});
+                    true;
+                } else {
+                    false;
+                }
+            `;
+            
+            const updated = await safeInjectScript(script, 'update fake event auto mode');
+            if (updated) {
+                showNotification(`🤖 Auto mode: ${autoMode ? 'BẬT' : 'TẮT'}`, 'info');
+            }
+        }
+    });
+
+    toggleAdvancedBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isHidden = fakeEventAdvanced.style.display === 'none';
+        fakeEventAdvanced.style.display = isHidden ? 'block' : 'none';
+        toggleAdvancedBtn.textContent = isHidden ? '⚙️ Ẩn cài đặt nâng cao' : '⚙️ Cài đặt nâng cao';
+    });
+
+    [fakeEventTestId, fakeEventExamId, fakeEventUserId].forEach(input => {
+        input.addEventListener('change', async () => {
+            const testId = fakeEventTestId.value.trim();
+            const examId = fakeEventExamId.value.trim();
+            const userId = fakeEventUserId.value.trim();
+            
+            localStorage.setItem('fakeEventTestId', testId);
+            localStorage.setItem('fakeEventExamId', examId);
+            localStorage.setItem('fakeEventUserId', userId);
+            
+            if (fakeEventEnabled && webviewReady) {
+                const script = `
+                    if (typeof window.__fakeEvent !== 'undefined' && window.__fakeEvent) {
+                        window.__fakeEvent.setIds('${testId}', '${examId}', '${userId}');
+                        true;
+                    } else {
+                        false;
+                    }
+                `;
+                
+                const updated = await safeInjectScript(script, 'update fake event IDs');
+                if (updated) {
+                    showNotification('📝 Đã cập nhật IDs', 'info');
+                }
+            }
+        });
+    });
+
+    loadFakeEventState();
 
     // ============= POP OUT FUNCTIONALITY =============
     popOutBtn.addEventListener('click', () => {
@@ -523,21 +869,83 @@ QUAN TRỌNG:
 
     // ============= WEBVIEW NAVIGATION =============
     
-    webview.addEventListener('dom-ready', () => {
-        console.log('Webview đã sẵn sàng');
-        window.electronAPI.registerWebview(webview.getWebContentsId());
-        captureAndSendBtn.disabled = false;
+    webview.addEventListener('dom-ready', async () => {
+        console.log('Webview DOM ready');
         
-        updateNavigationButtons();
-        urlBar.value = webview.getURL();
+        // Đợi thêm một chút để đảm bảo webview thực sự ready
+        await sleep(500);
         
-        if (antiTrackingEnabled) {
+        // Kiểm tra webview có thực sự ready không
+        try {
+            const testScript = `
+                (function() {
+                    return { 
+                        ready: true, 
+                        url: window.location.href,
+                        title: document.title
+                    };
+                })();
+            `;
+            
+            const testResult = await webview.executeJavaScript(testScript);
+            
+            if (testResult && testResult.ready) {
+                console.log('✅ Webview verified ready:', testResult);
+                webviewReady = true;
+                
+                // Register webview
+                window.electronAPI.registerWebview(webview.getWebContentsId());
+                captureAndSendBtn.disabled = false;
+                
+                // Update navigation
+                updateNavigationButtons();
+                urlBar.value = testResult.url || webview.getURL();
+                
+                // Process any pending injections
+                await processPendingInjections();
+                
+                // Auto-inject features if enabled
+                if (antiTrackingEnabled) {
+                    console.log('Auto-enabling anti-tracking...');
+                    await enableAntiTracking();
+                }
+                
+                if (fakeEventEnabled && fakeEventUsername.value) {
+                    console.log('Auto-enabling fake events...');
+                    await enableFakeEvents();
+                }
+                
+                showNotification('Ứng dụng đã sẵn sàng! AI Assistant có thể điều khiển trang web.', 'success');
+            } else {
+                console.warn('Webview test failed, retrying...');
+                setTimeout(() => {
+                    webview.dispatchEvent(new Event('dom-ready'));
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error verifying webview ready:', error);
+            webviewReady = false;
+            
+            // Retry after delay
             setTimeout(() => {
-                enableAntiTracking();
+                webview.dispatchEvent(new Event('dom-ready'));
             }, 1000);
         }
-        
-        showNotification('Ứng dụng đã sẵn sàng! AI Assistant có thể điều khiển trang web.', 'success');
+    });
+
+    webview.addEventListener('did-start-loading', () => {
+        console.log('Webview started loading');
+        webviewReady = false;
+    });
+
+    webview.addEventListener('did-stop-loading', () => {
+        console.log('Webview stopped loading');
+    });
+
+    webview.addEventListener('crashed', () => {
+        console.error('Webview crashed!');
+        webviewReady = false;
+        showNotification('❌ Webview crashed! Please reload.', 'error');
     });
 
     webview.addEventListener('did-navigate', (e) => {
@@ -960,10 +1368,6 @@ QUAN TRỌNG:
         } else {
             loading.classList.add('hidden');
         }
-    }
-
-    function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     // ============= PERFORMANCE INDICATOR =============

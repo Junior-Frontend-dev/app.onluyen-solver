@@ -19,11 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return await ipcRenderer.invoke('capture-screenshot');
   },
 
-  // Lấy DOM snapshot từ webview
-  getDomSnapshot: async () => {
-    return await ipcRenderer.invoke('get-dom-snapshot');
-  },
-
   // Gửi ảnh tới Gemini API
   sendToGemini: async (payload) => {
     return await ipcRenderer.invoke('send-to-gemini', payload);
@@ -39,9 +34,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return await ipcRenderer.invoke('read-anti-tracking-script');
   },
 
+  // Read fake event script
+  readFakeEventScript: async () => {
+    return await ipcRenderer.invoke('read-fake-event-script');
+  },
+
   // Send anti-tracking config
   updateAntiTracking: (config) => {
     ipcRenderer.send('update-anti-tracking', config);
+  },
+
+  // Send fake event config
+  updateFakeEvent: (config) => {
+    ipcRenderer.send('update-fake-event', config);
   },
 
   // Thực hiện click

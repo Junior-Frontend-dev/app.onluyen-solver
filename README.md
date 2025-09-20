@@ -108,6 +108,3 @@ Bạn có thể mở menu cài đặt bằng cách nhấp vào biểu tượng b
 - `Ctrl` + `Shift` + `I`: Mở DevTools của cửa sổ chính.
 - `Alt` + `ArrowLeft`: Quay lại trang trước.
 - `Alt` + `ArrowRight`: Tiến tới trang sau.
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Junior-Frontend-dev/app.onluyen-solver&type=Date)](https://www.star-history.com/#Junior-Frontend-dev/app.onluyen-solver&Date)

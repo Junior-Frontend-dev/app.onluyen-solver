@@ -11,6 +11,71 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Anti-tracking controls styling */
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .badge-warning {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+        }
+
+        #activity-level {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #333;
+            min-width: 150px;
+        }
+
+        #activity-level option {
+            background: white;
+            color: #333;
+        }
+
+        .checkbox-label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        #fake-event-username {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            transition: border-color 0.3s;
+        }
+
+        #fake-event-username:focus {
+            border-color: #f39c12;
+            outline: none;
+        }
+
+        #fake-event-username.valid {
+            border-color: #27ae60;
+        }
+
+        #fake-event-username.invalid {
+            border-color: #e74c3c;
+        }
+    </style>
 </head>
 <body>
     <!-- Settings Button -->
@@ -154,6 +219,64 @@
                 <small style="color: #666; display: block; margin-top: 5px;">
                     ⚡ Giả lập hoạt động người dùng, chống tracking, bypass AFK detection
                 </small>
+            </div>
+
+            <!-- Fake Event Out Screen -->
+            <div class="control-group">
+                <label for="fake-event-toggle">
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                        🎭 Fake Event Out Screen
+                        <span class="badge badge-warning" style="font-size: 10px;">ADVANCED</span>
+                    </span>
+                </label>
+                
+                <!-- Username Input -->
+                <div style="margin: 10px 0;">
+                    <input 
+                        type="text" 
+                        id="fake-event-username" 
+                        placeholder="Nhập email (vd: tronghb20@haiphong.edu.vn)"
+                        style="width: 100%; padding: 8px; margin-bottom: 10px;"
+                    />
+                </div>
+                
+                <!-- Toggle and Settings -->
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <label class="switch">
+                        <input type="checkbox" id="fake-event-toggle">
+                        <span class="slider"></span>
+                    </label>
+                    
+                    <select id="fake-event-interval" style="flex: 1; padding: 5px;">
+                        <option value="10000">Mỗi 10 giây</option>
+                        <option value="30000" selected>Mỗi 30 giây</option>
+                        <option value="60000">Mỗi 1 phút</option>
+                        <option value="120000">Mỗi 2 phút</option>
+                        <option value="300000">Mỗi 5 phút</option>
+                    </select>
+                    
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="fake-event-auto-mode">
+                        <span style="font-size: 12px;">Auto</span>
+                    </label>
+                </div>
+                
+                <!-- Advanced Settings (Initially Hidden) -->
+                <div id="fake-event-advanced" style="display: none; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 5px;">
+                    <small style="display: block; margin-bottom: 5px; font-weight: 600;">IDs (Tùy chọn):</small>
+                    <input type="text" id="fake-event-test-id" placeholder="Test ID" style="width: 100%; padding: 5px; margin-bottom: 5px; font-size: 12px;">
+                    <input type="text" id="fake-event-exam-id" placeholder="Exam ID" style="width: 100%; padding: 5px; margin-bottom: 5px; font-size: 12px;">
+                    <input type="text" id="fake-event-user-id" placeholder="User ID" style="width: 100%; padding: 5px; font-size: 12px;">
+                </div>
+                
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    🎯 Giả lập sự kiện người dùng rời màn hình, bypass hệ thống giám sát
+                </small>
+                
+                <!-- Show Advanced Button -->
+                <a href="#" id="toggle-fake-event-advanced" style="font-size: 12px; color: #667eea; text-decoration: none;">
+                    ⚙️ Cài đặt nâng cao
+                </a>
             </div>
 
             <!-- Custom Prompt -->
@@ -471,37 +594,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Anti-tracking styles -->
-    <style>
-        /* Anti-tracking controls styling */
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .badge-info {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        #activity-level {
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            color: #333;
-            min-width: 150px;
-        }
-
-        #activity-level option {
-            background: white;
-            color: #333;
-        }
-    </style>
 
     <script src="renderer.js"></script>
 </body>
