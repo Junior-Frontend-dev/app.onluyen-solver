@@ -9,6 +9,7 @@ let isExecuting = false;
 let screenshotDimensions = null;
 let isAutoModeActive = false;
 let autoModeInterval = null;
+let antiTrackingEnabled = false;
 
 const defaultSettings = {
     screenshotQuality: 70,
@@ -26,7 +27,7 @@ const defaultSettings = {
 let appSettings = { ...defaultSettings };
 
 function showNotification(message, type = 'info') {
-    if (appSettings.disableNotifications) return; // Check if notifications are disabled
+    if (appSettings.disableNotifications) return;
 
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -38,16 +39,13 @@ function showNotification(message, type = 'info') {
         info: 'ℹ'
     };
     
-    notification.innerHTML = (
-        `
+    notification.innerHTML = `
         <span class="notification-icon">${icons[type]}</span>
         <span class="notification-message">${message}</span>
-    `
-    );
+    `;
     
     document.body.appendChild(notification);
     
-    // Auto remove notification after 3 seconds
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => notification.remove(), 300);
@@ -82,6 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const goBtn = document.getElementById('go-btn');
     const popOutBtn = document.getElementById('pop-out-btn');
 
+    // Anti-tracking elements
+    const antiTrackingToggle = document.getElementById('anti-tracking-toggle');
+    const activityLevelSelect = document.getElementById('activity-level');
+
     // Setting Elements
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
@@ -108,9 +110,124 @@ document.addEventListener('DOMContentLoaded', () => {
     const actionsPerMinEl = document.getElementById('actions-per-min');
     const cacheSizeEl = document.getElementById('cache-size');
 
-    // --- SETTINGS INITIALIZATION ---
-    // This must run before any function that might call showNotification()
+    // Performance Indicator
+    const perfIndicator = document.getElementById('performance-indicator');
+    const closePerfIndicatorBtn = document.getElementById('close-perf-indicator');
+    const condensedPerfIndicator = document.getElementById('perf-indicator-condensed');
+    const condensedPerfDot = condensedPerfIndicator.querySelector('.perf-dot');
+
+    // Knowledge Base
+    const kbQuestionInput = document.getElementById('kb-question');
+    const kbAnswerInput = document.getElementById('kb-answer');
+    const saveKnowledgeBtn = document.getElementById('save-knowledge-btn');
+    const ragQueryInput = document.getElementById('rag-query-input');
+    const ragQueryBtn = document.getElementById('rag-query-btn');
+    const ragResponseDiv = document.getElementById('rag-response');
+
+    // Settings initialization
     loadSettings();
+
+    // ============= ANTI-TRACKING CONTROL =============
+    
+    function loadAntiTrackingState() {
+        const savedState = localStorage.getItem('antiTrackingEnabled');
+        const savedLevel = localStorage.getItem('antiTrackingLevel');
+        
+        if (savedState !== null) {
+            antiTrackingEnabled = savedState === 'true';
+            antiTrackingToggle.checked = antiTrackingEnabled;
+        }
+        
+        if (savedLevel) {
+            activityLevelSelect.value = savedLevel;
+        }
+    }
+
+    async function enableAntiTracking() {
+        const activityLevel = activityLevelSelect.value;
+        
+        if (webview && webview.getWebContentsId) {
+            try {
+                const scriptResult = await window.electronAPI.readAntiTrackingScript();
+                
+                if (scriptResult.success) {
+                    await webview.executeJavaScript(scriptResult.script);
+                    console.log('✅ Anti-tracking injected successfully');
+                    showNotification('🛡️ Chế độ Không Theo Dõi đã được kích hoạt', 'success');
+                    
+                    await webview.executeJavaScript(`
+                        if (window.__antiTracking) {
+                            window.__antiTracking.setActivityLevel('${activityLevel}');
+                        }
+                    `);
+                } else {
+                    throw new Error(scriptResult.error);
+                }
+            } catch (err) {
+                console.error('Failed to inject anti-tracking:', err);
+                showNotification('❌ Lỗi khi kích hoạt chế độ Không Theo Dõi', 'error');
+                return;
+            }
+        }
+        
+        antiTrackingEnabled = true;
+        localStorage.setItem('antiTrackingEnabled', 'true');
+        window.electronAPI.updateAntiTracking({ enabled: true, activityLevel });
+    }
+
+    async function disableAntiTracking() {
+        if (webview && webview.getWebContentsId) {
+            try {
+                await webview.executeJavaScript(`
+                    if (window.__antiTracking) {
+                        window.__antiTracking.stop();
+                        window.__antiTrackingActive = false;
+                    }
+                `);
+                console.log('✅ Anti-tracking disabled');
+                showNotification('🛡️ Chế độ Không Theo Dõi đã tắt', 'info');
+            } catch (err) {
+                console.error('Failed to disable anti-tracking:', err);
+            }
+        }
+        
+        antiTrackingEnabled = false;
+        localStorage.setItem('antiTrackingEnabled', 'false');
+        window.electronAPI.updateAntiTracking({ enabled: false });
+    }
+
+    antiTrackingToggle.addEventListener('change', async (e) => {
+        if (e.target.checked) {
+            await enableAntiTracking();
+        } else {
+            await disableAntiTracking();
+        }
+    });
+
+    activityLevelSelect.addEventListener('change', async (e) => {
+        localStorage.setItem('antiTrackingLevel', e.target.value);
+        
+        if (antiTrackingEnabled) {
+            if (webview) {
+                try {
+                    await webview.executeJavaScript(`
+                        if (window.__antiTracking) {
+                            window.__antiTracking.setActivityLevel('${e.target.value}');
+                        }
+                    `);
+                    showNotification(`📊 Mức độ hoạt động: ${e.target.options[e.target.selectedIndex].text}`, 'info');
+                    window.electronAPI.updateAntiTracking({ 
+                        enabled: true, 
+                        activityLevel: e.target.value 
+                    });
+                } catch (err) {
+                    console.error('Failed to update activity level:', err);
+                }
+            }
+        }
+    });
+
+    loadAntiTrackingState();
 
     // ============= POP OUT FUNCTIONALITY =============
     popOutBtn.addEventListener('click', () => {
@@ -121,8 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Setting control panel only mode');
         const webviewContainer = document.querySelector('.webview-container');
         const sidebar = document.querySelector('.sidebar');
-        const settingsBtn = document.getElementById('settings-btn');
-        const perfIndicator = document.getElementById('performance-indicator');
         
         if (webviewContainer) webviewContainer.classList.add('hidden');
         if (sidebar) {
@@ -137,16 +252,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.electronAPI.onSetWebviewOnlyMode(() => {
         console.log('Setting webview only mode');
         const sidebar = document.querySelector('.sidebar');
-        const settingsBtn = document.getElementById('settings-btn');
         if (sidebar) sidebar.classList.add('hidden');
-        // Optionally hide the settings button too
         if (settingsBtn) settingsBtn.style.display = 'none';
     });
 
     window.electronAPI.onShowSidebar(() => {
         console.log('Showing sidebar');
         const sidebar = document.querySelector('.sidebar');
-        const settingsBtn = document.getElementById('settings-btn');
         if (sidebar) sidebar.classList.remove('hidden');
         if (settingsBtn) settingsBtn.style.display = 'flex';
     });
@@ -154,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============= API KEY MANAGEMENT =============
     let apiKeys = [];
     let currentApiKeyIndex = 0;
-    let isApiKeyVisible = false; // Bắt đầu với key bị ẩn
+    let isApiKeyVisible = false;
     const toggleApiKeyVisibilityBtn = document.getElementById('toggle-api-key-visibility-btn');
     const iconEye = toggleApiKeyVisibilityBtn.querySelector('.icon-eye');
     const iconEyeOff = toggleApiKeyVisibilityBtn.querySelector('.icon-eye-off');
@@ -191,8 +303,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 apiKeys = data.keys || [];
                 currentApiKeyIndex = data.index || 0;
             } else {
-                 const legacyKeys = localStorage.getItem('gemini_api_key') || ''; // Legacy support
-                 if (legacyKeys) apiKeys = legacyKeys.split('\n').map(k => k.trim()).filter(Boolean);
+                const legacyKeys = localStorage.getItem('gemini_api_key') || '';
+                if (legacyKeys) apiKeys = legacyKeys.split('\n').map(k => k.trim()).filter(Boolean);
             }
         } catch (e) {
             console.error("Failed to load API keys:", e);
@@ -223,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Initial load
     loadApiKeys();
 
     saveApiKeyBtn.addEventListener('click', (e) => {
@@ -253,11 +364,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isAutoModeActive = true;
         showNotification('🤖 Chế độ TỰ ĐỘNG đã bật - AI sẽ tự động giải mọi câu hỏi!', 'success');
         
-        // Thay đổi giao diện để hiển thị đang ở chế độ auto
         captureAndSendBtn.innerHTML = '🔄 Auto Mode Active... (Click để dừng)';
         captureAndSendBtn.style.background = 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)';
         
-        // Bắt đầu chu kỳ auto
         await performAutoModeCycle();
     }
 
@@ -271,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         showNotification('⏹️ Đã dừng chế độ tự động', 'info');
         
-        // Khôi phục giao diện
         captureAndSendBtn.innerHTML = '📸 Chụp và Gửi AI';
         captureAndSendBtn.style.background = '';
     }
@@ -282,7 +390,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             showLoading(true);
             
-            // Bước 1: Chụp màn hình
             console.log('🔄 Auto Mode: Chụp màn hình...');
             const screenshotResult = await window.electronAPI.captureScreenshot();
             
@@ -295,11 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
             currentDomSnapshot = screenshotResult.domSnapshot;
             displayScreenshot(screenshotResult.data);
             
-            // Bước 2: Phân tích với AI
             console.log('🤖 Auto Mode: Gửi tới AI để phân tích...');
             const model = aiModelSelect.value;
             
-            // Prompt tự động cho chế độ auto
             const autoPrompt = `Chế độ TỰ ĐỘNG GIẢI BÀI TẬP:
 
 1. Tìm TẤT CẢ câu hỏi trắc nghiệm và tự luận trên màn hình
@@ -335,7 +440,6 @@ QUAN TRỌNG:
                 throw new Error(aiResult.error);
             }
             
-            // Bước 3: Xử lý response và thực hiện actions
             const actions = parseActionsFromResponse(aiResult.data);
             
             if (actions && actions.length > 0) {
@@ -343,13 +447,10 @@ QUAN TRỌNG:
                 currentActions = actions;
                 displayActions(actions);
                 
-                // Thực hiện tất cả actions
                 await executeAllActionsAuto();
                 
-                // Đợi một chút để trang load
                 await sleep(2000);
                 
-                // Tiếp tục chu kỳ nếu vẫn ở chế độ auto
                 if (isAutoModeActive) {
                     console.log('🔄 Auto Mode: Tiếp tục chu kỳ mới...');
                     await performAutoModeCycle();
@@ -357,11 +458,9 @@ QUAN TRỌNG:
             } else {
                 console.log('ℹ️ Auto Mode: Không tìm thấy hành động nào');
                 
-                // Thử scroll xuống để tìm câu hỏi mới
                 await window.electronAPI.performScroll(300);
                 await sleep(1000);
                 
-                // Thử lại nếu vẫn ở chế độ auto
                 if (isAutoModeActive) {
                     await performAutoModeCycle();
                 }
@@ -383,7 +482,7 @@ QUAN TRỌNG:
             currentActionIndex = i;
             updateActionDisplay();
             await executeAction(currentActions[i]);
-            await sleep(500); // Đợi giữa các action
+            await sleep(appSettings.autoDelay || 500);
         }
         currentActionIndex = 0;
     }
@@ -406,13 +505,10 @@ QUAN TRỌNG:
         return [];
     }
 
-    // ============= END AUTO MODE =============
-
-    // Xử lý thay đổi mode
+    // ============= MODE SELECTION =============
     modeRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
             if (e.target.value === 'auto') {
-                // Kích hoạt chế độ auto
                 actionControls.classList.remove('hidden');
                 startAutoMode();
             } else if (e.target.value === 'action') {
@@ -425,24 +521,25 @@ QUAN TRỌNG:
         });
     });
 
-    // ============= WEBVIEWNAVIGATION =============
+    // ============= WEBVIEW NAVIGATION =============
     
-    // Đăng ký webview khi nó load xong
     webview.addEventListener('dom-ready', () => {
         console.log('Webview đã sẵn sàng');
         window.electronAPI.registerWebview(webview.getWebContentsId());
         captureAndSendBtn.disabled = false;
         
-        // Update navigation buttons state
         updateNavigationButtons();
-        
-        // Update URL bar
         urlBar.value = webview.getURL();
+        
+        if (antiTrackingEnabled) {
+            setTimeout(() => {
+                enableAntiTracking();
+            }, 1000);
+        }
         
         showNotification('Ứng dụng đã sẵn sàng! AI Assistant có thể điều khiển trang web.', 'success');
     });
 
-    // Update URL bar khi navigate
     webview.addEventListener('did-navigate', (e) => {
         urlBar.value = e.url;
         updateNavigationButtons();
@@ -455,13 +552,11 @@ QUAN TRỌNG:
         }
     });
 
-    // Update navigation buttons state
     function updateNavigationButtons() {
         backBtn.disabled = !webview.canGoBack();
         forwardBtn.disabled = !webview.canGoForward();
     }
 
-    // Navigation button handlers
     backBtn.addEventListener('click', () => {
         if (webview.canGoBack()) {
             webview.goBack();
@@ -482,7 +577,6 @@ QUAN TRỌNG:
         webview.loadURL('https://app.onluyen.vn/');
     });
 
-    // URL bar navigation
     goBtn.addEventListener('click', () => {
         navigateToUrl();
     });
@@ -497,7 +591,6 @@ QUAN TRỌNG:
         let url = urlBar.value.trim();
         if (!url) return;
         
-        // Add protocol if missing
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             url = 'https://' + url;
         }
@@ -510,17 +603,13 @@ QUAN TRỌNG:
         }
     }
 
-    // ============= END WEBVIEW NAVIGATION =============
-
-    // Xử lý lỗi khi load webview
     webview.addEventListener('did-fail-load', (errorCode, errorDescription) => {
         console.error('Lỗi khi tải trang:', errorDescription);
         showNotification('Không thể tải trang web. Vui lòng kiểm tra kết nối mạng.', 'error');
     });
 
-    // Xử lý sự kiện chụp và gửi
+    // ============= CAPTURE AND SEND =============
     captureAndSendBtn.addEventListener('click', async () => {
-        // Nếu đang ở auto mode thì dừng
         if (isAutoModeActive) {
             stopAutoMode();
             return;
@@ -537,7 +626,6 @@ QUAN TRỌNG:
             captureAndSendBtn.disabled = true;
             geminiResult.innerHTML = '<p class="placeholder">Đang chụp màn hình...</p>';
 
-            // 1. Chụp màn hình
             const captureResult = await window.electronAPI.captureScreenshot();
 
             if (!captureResult.success) {
@@ -552,7 +640,6 @@ QUAN TRỌNG:
             showNotification('Chụp màn hình thành công! Đang gửi tới AI...', 'info');
             geminiResult.innerHTML = '<p class="placeholder">Đang gửi yêu cầu tới Gemini AI...</p>';
 
-            // 2. Gửi tới Gemini
             const mode = document.querySelector('input[name="ai-mode"]:checked').value;
             const model = aiModelSelect.value;
             const customPrompt = customPromptInput.value.trim();
@@ -583,11 +670,11 @@ QUAN TRỌNG:
                 showNotification('Phân tích thành công!', 'success');
             } else {
                 showNotification(`Lỗi API: ${result.error}`, 'error');
-                geminiResult.innerHTML = (
-                    `<div class="error">
+                geminiResult.innerHTML = `
+                    <div class="error">
                         <strong>❌ Lỗi:</strong> ${result.error}
-                    </div>`
-                );
+                    </div>
+                `;
             }
         } catch (error) {
             console.error('Lỗi trong quá trình chụp và gửi:', error);
@@ -598,7 +685,6 @@ QUAN TRỌNG:
         }
     });
 
-    // Listen for successful key updates from main process
     window.electronAPI.onApiKeyUpdated((newIndex) => {
         if (appSettings.debugMode) {
             console.log(`Switching to API key index: ${newIndex}`);
@@ -609,7 +695,6 @@ QUAN TRỌNG:
         updateApiKeyStatus();
     });
 
-    // Xử lý response có actions từ AI
     function processActionResponse(responseText) {
         try {
             const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -628,7 +713,6 @@ QUAN TRỌNG:
                     executeAllBtn.disabled = false;
                     executeStepBtn.disabled = false;
                     
-                    // Nếu ở chế độ auto, tự động thực hiện
                     if (isAutoModeActive) {
                         executeAllActionsAuto();
                     }
@@ -644,7 +728,7 @@ QUAN TRỌNG:
         }
     }
 
-    // Hiển thị danh sách actions
+    // ============= ACTION EXECUTION =============
     function displayActions(actions) {
         let html = '';
         actions.forEach((action, index) => {
@@ -657,8 +741,7 @@ QUAN TRỌNG:
             if (action.key) detailsHtml += `<span>Key: ${action.key}</span>`;
             if (action.deltaY !== undefined) detailsHtml += `<span>Scroll: ${action.deltaY}</span>`;
 
-            html += (
-                `
+            html += `
                 <div class="action-item ${statusClass}" data-index="${index}">
                     <div class="action-header">
                         <span class="action-number">${index + 1}</span>
@@ -669,14 +752,12 @@ QUAN TRỌNG:
                     </div>
                     <div class="action-description">${action.description || ''}</div>
                 </div>
-            `
-            );
+            `;
         });
 
         actionsList.innerHTML = html;
     }
 
-    // Thực hiện tất cả actions
     executeAllBtn.addEventListener('click', async () => {
         if (currentActions.length === 0) return;
 
@@ -691,7 +772,7 @@ QUAN TRỌNG:
             updateActionDisplay();
             await executeAction(currentActions[i]);
 
-            await sleep(800);
+            await sleep(appSettings.autoDelay || 800);
         }
 
         isExecuting = false;
@@ -704,7 +785,6 @@ QUAN TRỌNG:
         }
     });
 
-    // Thực hiện từng action
     executeStepBtn.addEventListener('click', async () => {
         if (currentActionIndex >= currentActions.length) {
             currentActionIndex = 0;
@@ -723,7 +803,6 @@ QUAN TRỌNG:
         }
     });
 
-    // Dừng thực hiện
     stopBtn.addEventListener('click', () => {
         isExecuting = false;
         isAutoModeActive = false;
@@ -731,7 +810,6 @@ QUAN TRỌNG:
         showNotification('Đã dừng thực hiện', 'info');
     });
 
-    // Thực hiện một action
     async function executeAction(action) {
         console.log('Thực hiện action:', action);
 
@@ -739,7 +817,6 @@ QUAN TRỌNG:
             let result;
             let x, y;
 
-            // Lấy tọa độ từ ai_id nếu có
             if (action.ai_id !== undefined) {
                 if (!currentDomSnapshot) {
                     showNotification('Lỗi: Thiếu DOM snapshot để thực hiện hành động.', 'error');
@@ -747,7 +824,6 @@ QUAN TRỌNG:
                 }
                 const element = currentDomSnapshot.find(el => el.ai_id === action.ai_id);
                 if (element) {
-                    // Sử dụng centerX, centerY đã được tính sẵn
                     x = element.rect.centerX || (element.rect.x + element.rect.width / 2);
                     y = element.rect.centerY || (element.rect.y + element.rect.height / 2);
                     console.log(`Element ${action.ai_id} found at center (${x}, ${y})`);
@@ -757,12 +833,11 @@ QUAN TRỌNG:
                 }
             }
 
-            // Thực hiện action theo type
             switch (action.type) {
                 case 'click':
                     if (x === undefined || y === undefined) {
-                         showNotification(`Lỗi: Hành động click thiếu ai_id.`, 'error');
-                         return;
+                        showNotification(`Lỗi: Hành động click thiếu ai_id.`, 'error');
+                        return;
                     }
                     showClickPosition(x, y);
                     result = await window.electronAPI.performClick(x, y);
@@ -771,9 +846,9 @@ QUAN TRỌNG:
                     break;
 
                 case 'type':
-                     if (x === undefined || y === undefined) {
-                         showNotification(`Lỗi: Hành động type thiếu ai_id.`, 'error');
-                         return;
+                    if (x === undefined || y === undefined) {
+                        showNotification(`Lỗi: Hành động type thiếu ai_id.`, 'error');
+                        return;
                     }
                     if (!action.text) {
                         showNotification(`Lỗi: Hành động type thiếu text.`, 'error');
@@ -805,7 +880,6 @@ QUAN TRỌNG:
                     break;
 
                 case 'move':
-                    // Skip move action for now
                     console.log('Move action skipped');
                     return;
 
@@ -823,9 +897,7 @@ QUAN TRỌNG:
         }
     }
 
-    // Hiển thị vị trí click/move trên overlay
     function showClickPosition(x, y, type = 'click') {
-        const webviewRect = webview.getBoundingClientRect();
         clickOverlay.style.left = `${x}px`;
         clickOverlay.style.top = `${y}px`;
         clickOverlay.className = `click-overlay ${type}`;
@@ -836,7 +908,6 @@ QUAN TRỌNG:
         clickOverlay.classList.add('hidden');
     }
 
-    // Update hiển thị action đang thực hiện
     function updateActionDisplay() {
         const items = document.querySelectorAll('.action-item');
         items.forEach((item, index) => {
@@ -851,22 +922,18 @@ QUAN TRỌNG:
         });
     }
 
-    // Hiển thị ảnh screenshot
+    // ============= DISPLAY FUNCTIONS =============
     function displayScreenshot(imageData) {
-        screenshotContainer.innerHTML = (
-            `
+        screenshotContainer.innerHTML = `
             <img src="${imageData}" alt="Screenshot" />
             <div class="screenshot-info">
                 <small>✓ Đã chụp lúc: ${new Date().toLocaleTimeString('vi-VN')}</small>
                 ${screenshotDimensions ? `<small>Kích thước: ${screenshotDimensions.width}x${screenshotDimensions.height}</small>` : ''}
             </div>
-        `
-        );
+        `;
     }
 
-    // Hiển thị kết quả từ Gemini
     function displayGeminiResult(text) {
-        // Format text với markdown cơ bản
         const formattedText = text
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -874,8 +941,7 @@ QUAN TRỌNG:
             .replace(/`(.*?)`/g, '<code>$1</code>')
             .replace(/\n/g, '<br>');
         
-        geminiResult.innerHTML = (
-            `
+        geminiResult.innerHTML = `
             <div class="result-content">
                 <div class="result-header">
                     <span class="badge badge-success">✓ Phân tích thành công</span>
@@ -885,11 +951,9 @@ QUAN TRỌNG:
                     ${formattedText}
                 </div>
             </div>
-        `
-        );
+        `;
     }
 
-    // Utility functions
     function showLoading(show) {
         if (show) {
             loading.classList.remove('hidden');
@@ -898,45 +962,11 @@ QUAN TRỌNG:
         }
     }
 
-    function showNotification(message, type = 'info') {
-        if (appSettings.disableNotifications) return; // Check if notifications are disabled
-
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        
-        const icons = {
-            success: '✓',
-            error: '✗',
-            warning: '⚠',
-            info: 'ℹ'
-        };
-        
-        notification.innerHTML = (
-            `
-            <span class="notification-icon">${icons[type]}</span>
-            <span class="notification-message">${message}</span>
-        `
-        );
-        
-        document.body.appendChild(notification);
-        
-        // Auto remove notification after 3 seconds
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
-
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    const perfIndicator = document.getElementById('performance-indicator');
-    const closePerfIndicatorBtn = document.getElementById('close-perf-indicator');
-    const condensedPerfIndicator = document.getElementById('perf-indicator-condensed');
-    const condensedPerfDot = condensedPerfIndicator.querySelector('.perf-dot');
-
-    // Make performance indicator draggable
+    // ============= PERFORMANCE INDICATOR =============
     perfIndicator.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', null);
         e.target.style.opacity = '0.5';
@@ -948,7 +978,6 @@ QUAN TRỌNG:
         perfIndicator.style.top = `${e.clientY}px`;
     });
 
-    // --- Performance Indicator Visibility --- 
     function setPerfIndicatorVisibility(visible) {
         if (visible) {
             perfIndicator.classList.remove('hidden');
@@ -964,10 +993,8 @@ QUAN TRỌNG:
     closePerfIndicatorBtn.addEventListener('click', () => setPerfIndicatorVisibility(false));
     condensedPerfIndicator.addEventListener('click', () => setPerfIndicatorVisibility(true));
 
-    // Load initial state
     const isPerfIndicatorVisible = localStorage.getItem('perfIndicatorVisible') !== 'false';
     setPerfIndicatorVisibility(isPerfIndicatorVisible);
-
 
     document.body.addEventListener("dragover", e => {
         e.preventDefault();
@@ -975,12 +1002,10 @@ QUAN TRỌNG:
     });
 
     // ============= SETTINGS MODAL =============
-
     function saveSettings() {
         try {
             localStorage.setItem('app_settings', JSON.stringify(appSettings));
             showNotification('Cài đặt đã được lưu!', 'success');
-            // Inform the main process of settings that affect it
             window.electronAPI.updateSettings(appSettings);
         } catch (error) {
             console.error("Failed to save settings:", error);
@@ -1019,16 +1044,13 @@ QUAN TRỌNG:
     }
 
     function applySettings() {
-        // Apply animation setting
         if (appSettings.reduceAnimation) {
             document.body.classList.add('reduce-animations');
         } else {
             document.body.classList.remove('reduce-animations');
         }
-        // Other settings are applied on-the-fly where they are used
     }
 
-    // Event Listeners for Settings
     settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
     closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
     modalBackdrop.addEventListener('click', () => settingsModal.classList.add('hidden'));
@@ -1075,10 +1097,6 @@ QUAN TRỌNG:
 
     enableCacheSwitch.addEventListener('change', (e) => {
         appSettings.enableCache = e.target.checked;
-        if (!appSettings.enableCache) {
-            // Clear cache if disabled
-            // Will implement cache logic later
-        }
     });
 
     debugModeSwitch.addEventListener('change', (e) => {
@@ -1094,24 +1112,7 @@ QUAN TRỌNG:
         appSettings.outputLanguage = e.target.value;
     });
 
-    // Performance Stats Update
-    setInterval(() => {
-        // RAM Usage
-        const memory = window.performance.memory;
-        if (memory) {
-            const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
-            ramUsageEl.textContent = `${usedMB} MB`;
-        }
-
-        // Will implement other stats later
-    }, 2000);
-    
-    // Load settings on startup
-    loadSettings();
-
-    // ============= END SETTINGS MODAL =============
-
-    // ============= CACHE & STATS =============
+    // ============= PERFORMANCE STATS =============
     const apiResponseCache = new Map();
     let lastFrameTime = performance.now();
     let frameCount = 0;
@@ -1132,97 +1133,25 @@ QUAN TRỌNG:
     }
     requestAnimationFrame(updateFps);
 
-    // Performance Stats Update Interval
     setInterval(() => {
-        // RAM Usage
         const memory = window.performance.memory;
         if (memory) {
             const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
             ramUsageEl.textContent = `${usedMB} MB`;
         }
 
-        // Actions per minute
         const elapsedMinutes = (Date.now() - monitoringStartTime) / 60000;
         if (elapsedMinutes > 0) {
             const actionsPerMin = (executedActionsCount / elapsedMinutes).toFixed(1);
             actionsPerMinEl.textContent = actionsPerMin;
         }
 
-        // Cache size
         const cacheSize = new TextEncoder().encode(JSON.stringify([...apiResponseCache])).length;
         const cacheSizeKB = (cacheSize / 1024).toFixed(1);
         cacheSizeEl.textContent = `${cacheSizeKB} KB`;
-
     }, 2000);
 
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-        // Ctrl/Cmd + S để chụp và gửi
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            if (!captureAndSendBtn.disabled) {
-                captureAndSendBtn.click();
-            }
-        }
-        
-        // Ctrl/Cmd + Enter để gửi tới Gemini (giữ lại phím tắt này)
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault();
-            if (!captureAndSendBtn.disabled) {
-                captureAndSendBtn.click();
-            }
-        }
-        
-        // Ctrl/Cmd + A để bật/tắt Auto Mode
-        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-            e.preventDefault();
-            const autoRadio = document.querySelector('input[name="ai-mode"][value="auto"]');
-            if (isAutoModeActive) {
-                stopAutoMode();
-                document.querySelector('input[name="ai-mode"][value="analyze"]').checked = true;
-            } else {
-                autoRadio.checked = true;
-                autoRadio.dispatchEvent(new Event('change'));
-            }
-        }
-        
-        // Alt + Left Arrow để quay lại
-        if (e.altKey && e.key === 'ArrowLeft') {
-            e.preventDefault();
-            if (!backBtn.disabled) {
-                backBtn.click();
-            }
-        }
-        
-        // Alt + Right Arrow để tiến tới
-        if (e.altKey && e.key === 'ArrowRight') {
-            e.preventDefault();
-            if (!forwardBtn.disabled) {
-                forwardBtn.click();
-            }
-        }
-        
-        // Space để thực hiện action tiếp theo (chỉ khi không focus vào INPUT hoặc TEXTAREA)
-        if (e.key === ' ' && 
-            document.activeElement.tagName !== 'INPUT' && 
-            document.activeElement.tagName !== 'TEXTAREA') {
-            e.preventDefault();
-            if (!executeStepBtn.disabled && currentActions.length > 0) {
-                executeStepBtn.click();
-            }
-        }
-    });
-
-    // Knowledge Base & RAG functionality
-    const kbQuestionInput = document.getElementById('kb-question');
-    const kbAnswerInput = document.getElementById('kb-answer');
-    const saveKnowledgeBtn = document.getElementById('save-knowledge-btn');
-    const ragQueryInput = document.getElementById('rag-query-input');
-    const ragQueryBtn = document.getElementById('rag-query-btn');
-    const ragResponseDiv = document.getElementById('rag-response');
-
-    // Save knowledge to database
+    // ============= KNOWLEDGE BASE =============
     saveKnowledgeBtn.addEventListener('click', async () => {
         const question = kbQuestionInput.value.trim();
         const answer = kbAnswerInput.value.trim();
@@ -1243,7 +1172,6 @@ QUAN TRỌNG:
         }
     });
 
-    // Query RAG system
     ragQueryBtn.addEventListener('click', async () => {
         const query = ragQueryInput.value.trim();
         if (query) {
@@ -1257,6 +1185,58 @@ QUAN TRỌNG:
             }
         } else {
             showNotification('Vui lòng nhập câu hỏi cho RAG', 'warning');
+        }
+    });
+
+    // ============= KEYBOARD SHORTCUTS =============
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (!captureAndSendBtn.disabled) {
+                captureAndSendBtn.click();
+            }
+        }
+        
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            if (!captureAndSendBtn.disabled) {
+                captureAndSendBtn.click();
+            }
+        }
+        
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+            e.preventDefault();
+            const autoRadio = document.querySelector('input[name="ai-mode"][value="auto"]');
+            if (isAutoModeActive) {
+                stopAutoMode();
+                document.querySelector('input[name="ai-mode"][value="analyze"]').checked = true;
+            } else {
+                autoRadio.checked = true;
+                autoRadio.dispatchEvent(new Event('change'));
+            }
+        }
+        
+        if (e.altKey && e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (!backBtn.disabled) {
+                backBtn.click();
+            }
+        }
+        
+        if (e.altKey && e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (!forwardBtn.disabled) {
+                forwardBtn.click();
+            }
+        }
+        
+        if (e.key === ' ' && 
+            document.activeElement.tagName !== 'INPUT' && 
+            document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            if (!executeStepBtn.disabled && currentActions.length > 0) {
+                executeStepBtn.click();
+            }
         }
     });
 });

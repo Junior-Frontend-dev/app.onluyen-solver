@@ -25,13 +25,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Gửi ảnh tới Gemini API
-  sendToGemini: async (imageBase64, apiKey, model, customPrompt) => {
-    return await ipcRenderer.invoke('send-to-gemini', imageBase64, apiKey, model, customPrompt);
+  sendToGemini: async (payload) => {
+    return await ipcRenderer.invoke('send-to-gemini', payload);
   },
 
   // Gửi ảnh tới Gemini với yêu cầu actions và DOM
-  sendToGeminiWithActions: async (imageBase64, apiKey, model, customPrompt, dimensions, domSnapshot) => {
-    return await ipcRenderer.invoke('send-to-gemini-with-actions', imageBase64, apiKey, model, customPrompt, dimensions, domSnapshot);
+  sendToGeminiWithActions: async (payload) => {
+    return await ipcRenderer.invoke('send-to-gemini-with-actions', payload);
+  },
+
+  // Read anti-tracking script
+  readAntiTrackingScript: async () => {
+    return await ipcRenderer.invoke('read-anti-tracking-script');
+  },
+
+  // Send anti-tracking config
+  updateAntiTracking: (config) => {
+    ipcRenderer.send('update-anti-tracking', config);
   },
 
   // Thực hiện click

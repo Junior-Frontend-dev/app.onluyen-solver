@@ -100,6 +100,7 @@
                     placeholder="Dán một hoặc nhiều API Key vào đây, mỗi key trên một dòng..."
                     rows="4"
                 ></textarea>
+                <small>
                     <a href="#" id="save-api-key" style="color: #27ae60;">💾 Lưu Keys</a>
                     <span id="api-key-status" style="margin-left: 10px;"></span>
                     <button id="toggle-api-key-visibility-btn" class="key-toggle-btn" title="Hiện/Ẩn Key">
@@ -128,6 +129,30 @@
                 </select>
                 <small style="color: #666;">
                     💡 Khuyến nghị: 2.5 Flash cho cân bằng tốc độ và chất lượng
+                </small>
+            </div>
+
+            <!-- Anti-Tracking Toggle -->
+            <div class="control-group">
+                <label for="anti-tracking-toggle">
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                        🛡️ Chế độ Không Theo Dõi
+                        <span class="badge badge-info" style="font-size: 10px;">BETA</span>
+                    </span>
+                </label>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <label class="switch">
+                        <input type="checkbox" id="anti-tracking-toggle">
+                        <span class="slider"></span>
+                    </label>
+                    <select id="activity-level" style="flex: 1; padding: 5px;">
+                        <option value="low">Hoạt động thấp</option>
+                        <option value="normal" selected>Hoạt động bình thường</option>
+                        <option value="high">Hoạt động cao</option>
+                    </select>
+                </div>
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    ⚡ Giả lập hoạt động người dùng, chống tracking, bypass AFK detection
                 </small>
             </div>
 
@@ -446,6 +471,37 @@
             </div>
         </div>
     </div>
+
+    <!-- Anti-tracking styles -->
+    <style>
+        /* Anti-tracking controls styling */
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        #activity-level {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #333;
+            min-width: 150px;
+        }
+
+        #activity-level option {
+            background: white;
+            color: #333;
+        }
+    </style>
 
     <script src="renderer.js"></script>
 </body>
