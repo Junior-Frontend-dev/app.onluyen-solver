@@ -1,13 +1,17 @@
-// main.js - Main Process với Error Handling và Cache Fix
-const { app, BrowserWindow, ipcMain, Menu, session } = require('electron');
+// main.js - Main Process với Error Handling và Cache Fix (FULL VERSION)
+const { app, BrowserWindow, ipcMain, Menu, session, protocol } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
+
+// Disable security warnings for development
+process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 
 // Clear cache on startup to prevent corruption
 app.commandLine.appendSwitch('disable-http-cache');
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('aggressive-cache-discard');
+app.commandLine.appendSwitch('enable-webview-tag');
 
 // Import database functions with error handling
 let initializeDatabase, saveKnowledge, getKnowledge, searchKnowledge;
@@ -34,7 +38,7 @@ async function clearCacheData() {
         const cachePath = path.join(app.getPath('userData'), 'Cache');
         const gpuCachePath = path.join(app.getPath('userData'), 'GPUCache');
         const codeCachePath = path.join(app.getPath('userData'), 'Code Cache');
-        
+
         // Remove cache directories if they exist
         const pathsToClean = [cachePath, gpuCachePath, codeCachePath];
         
@@ -131,49 +135,47 @@ function createDevConsole() {
 <head>
     <title>Dev Console</title>
     <style>
-        body {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            font-family: 'Consolas', 'Monaco', monospace;
-            margin: 0;
-            padding: 10px;
-            overflow-y: auto;
+        body { 
+            background: #1e1e1e; 
+            color: #d4d4d4; 
+            font-family: 'Consolas', 'Monaco', monospace; 
+            margin: 0; 
+            padding: 10px; 
+            overflow-y: auto; 
         }
-        #logs {
-            white-space: pre-wrap;
-            word-wrap: break-word;
+        #logs { 
+            white-space: pre-wrap; 
+            word-wrap: break-word; 
         }
-        .log-entry {
-            margin: 2px 0;
-            padding: 4px 8px;
-            border-left: 3px solid #555;
-            font-size: 13px;
-            line-height: 1.4;
+        .log-entry { 
+            margin: 2px 0; 
+            padding: 4px 8px; 
+            border-left: 3px solid #555; 
+            font-size: 13px; 
+            line-height: 1.4; 
         }
         .log-success { border-left-color: #4caf50; color: #4caf50; }
         .log-error { border-left-color: #f44336; color: #f44336; }
         .log-warning { border-left-color: #ff9800; color: #ff9800; }
         .log-info { border-left-color: #2196f3; color: #2196f3; }
-        .controls {
-            position: sticky;
-            top: 0;
-            background: #1e1e1e;
-            padding: 10px 0;
-            border-bottom: 1px solid #555;
-            margin-bottom: 10px;
+        .controls { 
+            position: sticky; 
+            top: 0; 
+            background: #1e1e1e; 
+            padding: 10px 0; 
+            border-bottom: 1px solid #555; 
+            margin-bottom: 10px; 
         }
-        button {
-            background: #333;
-            color: #fff;
-            border: 1px solid #555;
-            padding: 5px 15px;
-            margin-right: 10px;
-            cursor: pointer;
-            border-radius: 3px;
+        button { 
+            background: #333; 
+            color: #fff; 
+            border: 1px solid #555; 
+            padding: 5px 15px; 
+            margin-right: 10px; 
+            cursor: pointer; 
+            border-radius: 3px; 
         }
-        button:hover {
-            background: #444;
-        }
+        button:hover { background: #444; }
     </style>
 </head>
 <body>
@@ -189,7 +191,7 @@ function createDevConsole() {
         const path = require('path');
         const logsDiv = document.getElementById('logs');
         let allLogs = [];
-        
+
         ipcRenderer.on('dev-log', (event, data) => {
             const logEntry = document.createElement('div');
             logEntry.className = 'log-entry log-' + data.type;
@@ -224,7 +226,7 @@ function createDevConsole() {
         console.error('Failed to load dev console:', err);
         devWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(devConsoleHtml));
     });
-    
+
     devWindow.on('closed', () => {
         devWindow = null;
     });
@@ -234,7 +236,7 @@ function createDevConsole() {
 function devLog(message, type = 'info') {
     const timestamp = new Date().toLocaleTimeString('vi-VN');
     const logMessage = `[${timestamp}] ${message}`;
-    
+
     if (mainSettings.debugMode) {
         try {
             console.log(logMessage);
@@ -242,7 +244,7 @@ function devLog(message, type = 'info') {
             // Ignore encoding errors
         }
     }
-    
+
     if (devWindow && !devWindow.isDestroyed()) {
         devWindow.webContents.send('dev-log', {
             message: logMessage,
@@ -289,12 +291,21 @@ ipcMain.on('open-popup-window', (event) => {
     });
 });
 
+// Register custom protocol
+function registerProtocols() {
+    protocol.registerFileProtocol('safe-file', (request, callback) => {
+        const url = request.url.replace('safe-file://', '');
+        const decodedUrl = decodeURIComponent(url);
+        callback({ path: path.normalize(decodedUrl) });
+    });
+}
+
 // Tạo cửa sổ chính của ứng dụng
 function createWindow() {
     // Clear partition data to prevent cache issues
     const partition = 'persist:main';
     session.fromPartition(partition).clearCache();
-    
+
     mainWindow = new BrowserWindow({
         width: 1400,
         height: 900,
@@ -304,8 +315,11 @@ function createWindow() {
             nodeIntegration: false,
             webviewTag: true,
             webSecurity: false,
-            partition: partition
-        }
+            partition: partition,
+            allowRunningInsecureContent: true,
+            experimentalFeatures: true
+        },
+        icon: path.join(__dirname, 'assets', 'icon.png') // Add if you have an icon
     });
 
     mainWindow.loadFile('index.html');
@@ -404,10 +418,15 @@ function createWindow() {
         callback(true); // Ignore certificate errors for development
     });
 
+    // Handle new window requests
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        return { action: 'deny' };
+    });
+
     if (mainSettings.autoOpenDevConsole) {
         setTimeout(() => createDevConsole(), 1000);
     }
-    
+
     devLog('🚀 Ứng dụng đã khởi động thành công!', 'success');
 }
 
@@ -415,7 +434,10 @@ function createWindow() {
 app.whenReady().then(async () => {
     // Clear cache on startup
     await clearCacheData();
-    
+
+    // Register protocols
+    registerProtocols();
+
     loadMainSettings();
     await initializeDatabase();
     createWindow();
@@ -441,7 +463,7 @@ app.whenReady().then(async () => {
     ipcMain.handle('get-knowledge', async () => {
         try {
             const result = await getKnowledge();
-            devLog(`✅ Retrieved knowledge items`, 'success');
+            devLog(`✅ Retrieved ${result.length} knowledge items`, 'success');
             return result;
         } catch (error) {
             devLog(`❌ Error getting knowledge: ${error.message}`, 'error');
@@ -452,7 +474,7 @@ app.whenReady().then(async () => {
     ipcMain.handle('search-knowledge', async (event, query) => {
         try {
             const result = await searchKnowledge(query);
-            devLog(`✅ Found matching knowledge items`, 'success');
+            devLog(`✅ Found ${result.length} matching knowledge items`, 'success');
             return result;
         } catch (error) {
             devLog(`❌ Error searching knowledge: ${error.message}`, 'error');
@@ -461,7 +483,7 @@ app.whenReady().then(async () => {
     });
 
     ipcMain.handle('get-settings', () => mainSettings);
-    
+
     // RAG query handler
     ipcMain.handle('rag-query', async (event, userQuery) => {
         try {
@@ -521,7 +543,7 @@ ipcMain.on('register-webview', (event, webContentsId) => {
 // Anti-tracking configuration handler
 ipcMain.on('update-anti-tracking', (event, config) => {
     devLog(`🛡️ Anti-tracking config updated: ${JSON.stringify(config)}`, 'info');
-    
+
     if (mainWebviewContents && !mainWebviewContents.isDestroyed()) {
         mainWebviewContents.send('update-anti-tracking', config);
     }
@@ -530,7 +552,7 @@ ipcMain.on('update-anti-tracking', (event, config) => {
 // Fake event configuration handler
 ipcMain.on('update-fake-event', (event, config) => {
     devLog(`🎭 Fake event config updated: ${JSON.stringify(config)}`, 'info');
-    
+
     if (mainWebviewContents && !mainWebviewContents.isDestroyed()) {
         mainWebviewContents.send('update-fake-event', config);
     }
@@ -573,8 +595,10 @@ ipcMain.handle('read-fake-event-script', async () => {
 // Capture screenshot
 ipcMain.handle('capture-screenshot', async () => {
     try {
-        if (!mainWebviewContents) throw new Error('Webview chưa sẵn sàng');
-        
+        if (!mainWebviewContents || mainWebviewContents.isDestroyed()) {
+            throw new Error('Webview chưa sẵn sàng');
+        }
+
         const getDomSnapshotScript = `(() => { 
             try { 
                 const elements = []; 
@@ -785,21 +809,20 @@ ipcMain.handle('send-to-gemini-with-actions', async (event, payload) => {
             const limitedSnapshot = safeDomSnapshot.slice(0, mainSettings.domLimit);
             
             const actionPrompt = `${userPrompt}Bạn là một AI trợ lý giải bài tập trên OnLuyen.vn.
-
-**BỐI CẢNH:**
-1. Ảnh màn hình: ${dimensions?.width || 0}x${dimensions?.height || 0} pixels
-2. DOM elements (${limitedSnapshot.length} elements):
+BỐI CẢNH:
+- Ảnh màn hình: ${dimensions?.width || 0}x${dimensions?.height || 0} pixels
+- DOM elements (${limitedSnapshot.length} elements):
 ${JSON.stringify(limitedSnapshot, null, 2)}
 
-**NHIỆM VỤ:**
+NHIỆM VỤ:
 Phân tích và tạo actions để giải bài tập.
 
-**QUAN TRỌNG - TRẢ VỀ JSON ĐÚNG FORMAT:**
+QUAN TRỌNG - TRẢ VỀ JSON ĐÚNG FORMAT:
 {
-  "analysis": "Mô tả phân tích (bằng ngôn ngữ ${mainSettings.outputLanguage || 'Tiếng Việt'})",
-  "actions": [ { "type": "click", "ai_id": [number], "description": "..." } ]
+    "analysis": "Mô tả phân tích (bằng ngôn ngữ ${mainSettings.outputLanguage || 'Tiếng Việt'})",
+    "actions": [ { "type": "click", "ai_id": [number], "description": "..." } ]
 }`;
-            
+
             const requestPayload = {
                 contents: [{
                     parts: [
@@ -849,9 +872,11 @@ Phân tích và tạo actions để giải bài tập.
 // Perform click action
 ipcMain.handle('perform-click', async (event, x, y) => {
     try {
-        if (!mainWebviewContents) throw new Error('Webview chưa sẵn sàng');
+        if (!mainWebviewContents || mainWebviewContents.isDestroyed()) {
+            throw new Error('Webview chưa sẵn sàng');
+        }
         devLog(`🖱️ Click tại vị trí (${x}, ${y})`, 'info');
-        
+
         mainWebviewContents.sendInputEvent({
             type: 'mouseDown',
             x: Math.round(x),
@@ -879,9 +904,11 @@ ipcMain.handle('perform-click', async (event, x, y) => {
 // Perform type action
 ipcMain.handle('perform-type', async (event, text, x, y) => {
     try {
-        if (!mainWebviewContents) throw new Error('Webview chưa sẵn sàng');
+        if (!mainWebviewContents || mainWebviewContents.isDestroyed()) {
+            throw new Error('Webview chưa sẵn sàng');
+        }
         if (!text) throw new Error('Không có text để nhập');
-        
+
         devLog(`⌨️ Nhập text "${text}" tại (${x}, ${y})`, 'info');
         
         // Click vào vị trí nếu có tọa độ
@@ -943,9 +970,11 @@ ipcMain.handle('perform-type', async (event, text, x, y) => {
 // Perform clear action
 ipcMain.handle('perform-clear', async (event, x, y) => {
     try {
-        if (!mainWebviewContents) throw new Error('Webview chưa sẵn sàng');
+        if (!mainWebviewContents || mainWebviewContents.isDestroyed()) {
+            throw new Error('Webview chưa sẵn sàng');
+        }
         devLog(`🗑️ Xóa nội dung tại (${x}, ${y})`, 'info');
-        
+
         mainWebviewContents.sendInputEvent({
             type: 'mouseDown',
             x: Math.round(x),
@@ -974,7 +1003,9 @@ ipcMain.handle('perform-clear', async (event, x, y) => {
 // Perform move action
 ipcMain.handle('perform-move', async (event, x, y) => {
     try {
-        if (!mainWebviewContents) throw new Error('Webview chưa sẵn sàng');
+        if (!mainWebviewContents || mainWebviewContents.isDestroyed()) {
+            throw new Error('Webview chưa sẵn sàng');
+        }
         mainWebviewContents.sendInputEvent({
             type: 'mouseMove',
             x: Math.round(x),
@@ -991,7 +1022,9 @@ ipcMain.handle('perform-move', async (event, x, y) => {
 // Perform scroll action
 ipcMain.handle('perform-scroll', async (event, deltaY) => {
     try {
-        if (!mainWebviewContents) throw new Error('Webview chưa sẵn sàng');
+        if (!mainWebviewContents || mainWebviewContents.isDestroyed()) {
+            throw new Error('Webview chưa sẵn sàng');
+        }
         const scrollAmount = deltaY || 300;
         mainWebviewContents.sendInputEvent({
             type: 'mouseWheel',
@@ -1011,7 +1044,9 @@ ipcMain.handle('perform-scroll', async (event, deltaY) => {
 // Perform key press action
 ipcMain.handle('perform-key', async (event, key) => {
     try {
-        if (!mainWebviewContents) throw new Error('Webview chưa sẵn sàng');
+        if (!mainWebviewContents || mainWebviewContents.isDestroyed()) {
+            throw new Error('Webview chưa sẵn sàng');
+        }
         const keyMap = {
             'Enter': 'Return',
             'Tab': 'Tab',
@@ -1029,7 +1064,7 @@ ipcMain.handle('perform-key', async (event, key) => {
             'PageDown': 'PageDown'
         };
         const keyCode = keyMap[key] || key;
-        
+
         mainWebviewContents.sendInputEvent({
             type: 'keyDown',
             keyCode: keyCode
@@ -1052,7 +1087,7 @@ ipcMain.handle('perform-key', async (event, key) => {
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
     devLog(`❌ Uncaught Exception: ${error.message}`, 'error');
-    
+
     // Try to recover
     if (error.message.includes('cache') || error.message.includes('backend_impl')) {
         clearCacheData().then(() => {
