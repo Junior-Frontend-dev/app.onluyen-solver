@@ -17,7 +17,7 @@
 
 ## 📜 Mục lục
 
-1.  [Tại sao có Dự án này?](#-triết-lý-dự-án)
+1.  [Tại sao có Dự án này?](#-tại-sao-có-dự-án-này)
 2.  [Tổng quan Tính năng Chuyên sâu](#-tổng-quan-tính-năng-chuyên-sâu)
     *   [Bảng điều khiển AI Độc lập](#-bảng-điều-khiển-trợ-lý-ai-độc-lập)
     *   [Phân tích Đa phương thức](#-phân-tích-đa-phương-thức-hình-ảnh--dom)
