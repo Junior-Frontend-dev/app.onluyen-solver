@@ -144,5 +144,5 @@ Xin chân thành cảm ơn bạn đã quan tâm và sử dụng dự án OnLuyen
 
 ---
 <div align="center">
-  <em>Được chế tác với niềm đam mê dành cho học tập và công nghệ bởi Junior-Frontend-dev.</em>
+  <em>Được build with love bởi Junior-Frontend-dev và Trongdepzai-dev</em>
 </div>
