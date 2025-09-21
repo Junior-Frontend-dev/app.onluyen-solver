@@ -263,7 +263,6 @@ ipcMain.on('open-popup-window', (event) => {
     popupWindow = new BrowserWindow({
         width: 500,
         height: 800,
-        parent: mainWindow,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -286,7 +285,11 @@ ipcMain.on('open-popup-window', (event) => {
     popupWindow.on('closed', () => {
         popupWindow = null;
         if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('show-sidebar');
+            try {
+                mainWindow.webContents.send('show-sidebar');
+            } catch (error) {
+                devLog(`Could not send 'show-sidebar' to main window: ${error.message}`, 'warning');
+            }
         }
     });
 });
@@ -344,6 +347,15 @@ function createWindow() {
                     accelerator: 'Ctrl+Shift+I',
                     click: () => {
                         mainWindow.webContents.toggleDevTools();
+                    }
+                },
+                {
+                    label: 'Toggle Webview DevTools',
+                    accelerator: 'Ctrl+Shift+O',
+                    click: () => {
+                        if (mainWebviewContents && !mainWebviewContents.isDestroyed()) {
+                            mainWebviewContents.toggleDevTools();
+                        }
                     }
                 },
                 {
