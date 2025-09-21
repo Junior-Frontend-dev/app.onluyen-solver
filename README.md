@@ -7,7 +7,6 @@
   </p>
   <br/>
   <p>
-    
     <img src="https://img.shields.io/badge/Electron-^27.0.0-47848F?style=for-the-badge&logo=electron" alt="Electron">
     <img src="https://img.shields.io/badge/Google-Gemini_API-8A2BE2?style=for-the-badge&logo=google" alt="Gemini API">
     <img src="https://img.shields.io/badge/Node.js-LTS-339933?style=for-the-badge&logo=node.js" alt="Node.js">
@@ -18,7 +17,7 @@
 
 ## 📜 Mục lục
 
-1.  [Triết lý Dự án](#-triết-lý-dự-án)
+1.  [Tại sao có Dự án này?](#-triết-lý-dự-án)
 2.  [Tổng quan Tính năng Chuyên sâu](#-tổng-quan-tính-năng-chuyên-sâu)
     *   [Bảng điều khiển AI Độc lập](#-bảng-điều-khiển-trợ-lý-ai-độc-lập)
     *   [Phân tích Đa phương thức](#-phân-tích-đa-phương-thức-hình-ảnh--dom)
@@ -41,7 +40,7 @@
 
 ---
 
-## 🔭 Triết lý Dự án
+## 🔭 Tại Sao có Dự án này
 
 Trong bối cảnh giáo dục số hóa ngày càng phát triển, chúng ta thường xuyên đối mặt với những nền tảng học tập một chiều, thiếu tính tương tác và khả năng thích ứng. **OnLuyen.vn AI Assistant** được sinh ra từ một triết lý cốt lõi: **trao quyền cho người học**. Chúng tôi tin rằng công nghệ, đặc biệt là trí tuệ nhân tạo, có thể và nên được sử dụng để phá vỡ các rào cản, biến việc học từ một quá trình thụ động thành một cuộc đối thoại năng động và được cá nhân hóa.
 
