@@ -130,7 +130,6 @@ Dự án này liên tục phát triển. Dưới đây là một số tính năn
 *   [ ] **Tìm kiếm Vector cho Cơ sở Tri thức:** Thay thế tìm kiếm chuỗi đơn giản bằng hệ thống embedding để tìm các câu hỏi tương tự về mặt ngữ nghĩa.
 *   [ ] **Hỗ trợ Đa nền tảng Học tập:** Tạo các "adapter" để ứng dụng có thể hoạt động trên các trang web giáo dục khác.
 *   [ ] **Giao diện Quản lý Cơ sở Tri thức:** Cho phép người dùng duyệt, chỉnh sửa và xóa các mục trong cơ sở tri thức.
-*   [ ] **Chống Giám sát Nâng cao:** Tích hợp các biện pháp đối phó với các kỹ thuật giám sát phức tạp hơn như phát hiện webcam hoặc micro.
 *   [ ] **Học tập Cộng tác:** Cho phép người dùng tùy chọn chia sẻ và sử dụng cơ sở tri thức của cộng đồng.
 *   [ ] **Hệ thống Plugin:** Cho phép cộng đồng viết các plugin của riêng họ để mở rộng chức năng.
 
