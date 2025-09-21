@@ -132,7 +132,8 @@ Dự án này liên tục phát triển. Dưới đây là một số tính năn
 *   [ ] **Giao diện Quản lý Cơ sở Tri thức:** Cho phép người dùng duyệt, chỉnh sửa và xóa các mục trong cơ sở tri thức.
 *   [ ] **Học tập Cộng tác:** Cho phép người dùng tùy chọn chia sẻ và sử dụng cơ sở tri thức của cộng đồng.
 *   [ ] **Hệ thống Plugin:** Cho phép cộng đồng viết các plugin của riêng họ để mở rộng chức năng.
-
+*   [ ] **Nâng cấp Giao diện bằng Framework:** Xây dựng lại giao diện người dùng bằng một framework hiện đại như React hoặc Vue.js để có một thiết kế chuyên nghiệp, đẹp mắt và dễ bảo trì hơn.
+*   [ ] **Tìm kiếm Vector cho Cơ sở Tri thức:** Thay vì tìm kiếm chính xác chuỗi văn bản, sử dụng AI để tìm các câu hỏi tương tự về mặt ngữ nghĩa trong cơ sở dữ liệu, giúp tăng tỷ lệ tìm thấy câu trả lời cũ lên rất nhiều.
 ## 🤝 Đóng góp cho Dự án
 
 Chúng tôi hoan nghênh mọi hình thức đóng góp. Vui lòng **Fork** kho mã nguồn, tạo một **Feature Branch**, và mở một **Pull Request** để đề xuất các thay đổi của bạn.
