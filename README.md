@@ -7,8 +7,7 @@
   </p>
   <br/>
   <p>
-    <a href="https://github.com/Junior-Frontend-dev/app.onluyen-solver/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Junior-Frontend-dev/onluyen-electron-app?style=for-the-badge" alt="License"></a>
-    <a href="https://github.com/Junior-Frontend-dev/app.onluyen-solver/releases"><img src="https://img.shields.io/github/package-json/v/Junior-Frontend-dev/onluyen-electron-app?style=for-the-badge" alt="Version"></a>
+    
     <img src="https://img.shields.io/badge/Electron-^27.0.0-47848F?style=for-the-badge&logo=electron" alt="Electron">
     <img src="https://img.shields.io/badge/Google-Gemini_API-8A2BE2?style=for-the-badge&logo=google" alt="Gemini API">
     <img src="https://img.shields.io/badge/Node.js-LTS-339933?style=for-the-badge&logo=node.js" alt="Node.js">
