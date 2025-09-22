@@ -92,7 +92,7 @@
       border-radius: 6px;
       word-wrap: break-word;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
       animation: fadeIn 0.3s ease;
     }
@@ -100,6 +100,25 @@
       from {opacity: 0; transform: translateY(4px);}
       to {opacity: 1; transform: translateY(0);}
     }
+
+    .log-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #888;
+      min-width: 100px;
+    }
+
+    .log-time {
+      font-size: 11px;
+    }
+    
+    .log-message {
+      flex: 1;
+      padding-left: 8px;
+      border-left: 1px solid #333;
+    }
+
 
     .log-entry.info {color:#64b5f6; background:rgba(100,181,246,0.08);}
     .log-entry.success {color:#81c784; background:rgba(129,199,132,0.08);}
@@ -168,6 +187,7 @@
     <div class="stat-item"><div class="stat-dot error"></div> Error: <span id="error-count">0</span></div>
     <div class="stat-item"><div class="stat-dot warning"></div> Warning: <span id="warning-count">0</span></div>
     <div class="stat-item">Total: <span id="total-count">0</span></div>
+    <div class="stat-item">Memory: <span id="memory-usage">...</span></div>
   </div>
 
   <script>
@@ -191,7 +211,8 @@
         info:"ℹ️", success:"✅", error:"❌", warning:"⚠️"
       }[type] || "📌";
 
-      logEntry.innerHTML = `<span class="log-icon">${icon}</span> ${message}`;
+      const timestamp = new Date().toLocaleTimeString();
+      logEntry.innerHTML = `<span class="log-meta"><span class="log-icon">${icon}</span><span class="log-time">${timestamp}</span></span> <span class="log-message">${message}</span>`;
       logs.push({ message, type, element: logEntry });
 
       stats[type] = (stats[type]||0)+1;
@@ -236,6 +257,18 @@
       document.getElementById('warning-count').textContent = stats.warning;
       document.getElementById('total-count').textContent = stats.total;
     }
+
+    function updateMemoryUsage() {
+      if (performance.memory) {
+        const used = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+        const total = (performance.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2);
+        document.getElementById('memory-usage').textContent = `${used} MB / ${total} MB`;
+      } else {
+        document.getElementById('memory-usage').textContent = 'N/A';
+      }
+    }
+
+    setInterval(updateMemoryUsage, 2000); // Cập nhật mỗi 2 giây
 
     addLog('🚀 Dev Console đã sẵn sàng!', 'success');
     addLog('💡 Nhấn F12 để toggle Dev Console', 'info');

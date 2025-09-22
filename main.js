@@ -518,6 +518,10 @@ app.whenReady().then(async () => {
         }
     });
 
+
+
+
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
@@ -613,6 +617,7 @@ ipcMain.handle('capture-screenshot', async () => {
 
         const getDomSnapshotScript = `(() => { 
             try { 
+                document.querySelectorAll('[data-ai-id]').forEach(el => el.removeAttribute('data-ai-id'));
                 const elements = []; 
                 let idCounter = 0; 
                 
@@ -649,9 +654,11 @@ ipcMain.handle('capture-screenshot', async () => {
                             
                             const scrollX = window.pageXOffset || 0; 
                             const scrollY = window.pageYOffset || 0; 
+                            const ai_id = idCounter++;
+                            el.setAttribute('data-ai-id', ai_id);
                             
                             elements.push({ 
-                                ai_id: idCounter++, 
+                                ai_id: ai_id, 
                                 tagName: el.tagName.toLowerCase(), 
                                 rect: { 
                                     x: rect.x, 
@@ -820,19 +827,37 @@ ipcMain.handle('send-to-gemini-with-actions', async (event, payload) => {
             const safeDomSnapshot = Array.isArray(domSnapshot) ? domSnapshot : [];
             const limitedSnapshot = safeDomSnapshot.slice(0, mainSettings.domLimit);
             
-            const actionPrompt = `${userPrompt}Bạn là một AI trợ lý giải bài tập trên OnLuyen.vn.
+const actionPrompt = `${userPrompt}Bạn là một AI trợ lý điều khiển trang web để giải bài tập trên OnLuyen.vn.
 BỐI CẢNH:
 - Ảnh màn hình: ${dimensions?.width || 0}x${dimensions?.height || 0} pixels
 - DOM elements (${limitedSnapshot.length} elements):
 ${JSON.stringify(limitedSnapshot, null, 2)}
 
 NHIỆM VỤ:
-Phân tích và tạo actions để giải bài tập.
+Phân tích và tạo một chuỗi các hành động (actions) để giải bài tập hoặc thực hiện yêu cầu.
+
+CÁC HÀNH ĐỘNG (ACTIONS) CÓ THỂ SỬ DỤNG:
+- {"type": "click", "ai_id": <number>, "description": "..."} - Click vào một phần tử.
+- {"type": "type", "ai_id": <number>, "text": "<string>", "description": "..."} - Nhập chữ vào một ô.
+- {"type": "wait", "ms": <number>, "description": "..."} - Chờ một khoảng thời gian (tính bằng mili giây).
+- {"type": "doubleClick", "ai_id": <number>, "description": "..."} - Nhấp đúp vào phần tử.
+- {"type": "hover", "ai_id": <number>, "description": "..."} - Di chuột qua một phần tử.
+- {"type": "selectOption", "ai_id": <number>, "value": "<string>", "description": "..."} - Chọn một giá trị từ dropdown.
+- {"type": "dragAndDrop", "source_ai_id": <number>, "target_ai_id": <number>, "description": "..."} - Kéo và thả.
+- {"type": "runScript", "script": "<string>", "description": "..."} - Chạy mã Javascript.
+- {"type": "reload", "description": "..."} - Tải lại trang.
+- {"type": "goBack", "description": "..."} - Quay lại trang trước.
+- {"type": "scrollToElement", "ai_id": <number>, "description": "..."} - Cuộn đến một phần tử.
+- {"type": "focus", "ai_id": <number>, "description": "..."} - Focus vào một phần tử.
+- {"type": "scroll", "deltaY": <number>, "description": "..."} - Cuộn trang theo chiều dọc.
+- {"type": "key", "key": "<string>", "description": "..."} - Nhấn một phím (ví dụ: "Enter", "Escape").
 
 QUAN TRỌNG - TRẢ VỀ JSON ĐÚNG FORMAT:
 {
-    "analysis": "Mô tả phân tích (bằng ngôn ngữ ${mainSettings.outputLanguage || 'Tiếng Việt'})",
-    "actions": [ { "type": "click", "ai_id": [number], "description": "..." } ]
+    "analysis": "Mô tả phân tích của bạn (bằng ngôn ngữ ${mainSettings.outputLanguage || 'Tiếng Việt'})",
+    "actions": [
+        // một mảng các hành động ở đây
+    ]
 }`;
 
             const requestPayload = {

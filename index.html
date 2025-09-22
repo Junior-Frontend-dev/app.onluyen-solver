@@ -75,6 +75,65 @@
         #fake-event-username.invalid {
             border-color: #e74c3c;
         }
+
+        .user-info {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border: 1px solid #e0e0e0;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .user-info label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .user-info-details p {
+            margin: 4px 0;
+            font-size: 13px;
+            color: #555;
+        }
+        .user-info-details p strong {
+            color: #111;
+        }
+        .user-info-details span {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: rgba(255,255,255,0.5);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .exam-info {
+            background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+            border: 1px solid #a5d6a7;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .exam-info label {
+            font-weight: 600;
+            color: #004d40;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .exam-info-details p {
+            margin: 4px 0;
+            font-size: 13px;
+            color: #00695c;
+        }
+        .exam-info-details p strong {
+            color: #004d40;
+        }
+        .exam-info-details span {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: rgba(255,255,255,0.6);
+            padding: 2px 4px;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+
     </style>
 </head>
 <body>
@@ -156,6 +215,27 @@
                     </svg>
                 </button>
             </div>
+
+            <!-- User Info Display -->
+            <div id="user-info-container" class="control-group user-info">
+                <label>👤 Thông Tin Người Dùng:</label>
+                <div class="user-info-details">
+                    <p><strong>Tên:</strong> <span id="user-name">...</span></p>
+                    <p><strong>User ID:</strong> <span id="user-id">...</span></p>
+                </div>
+            </div>
+
+            <!-- Exam Info Display -->
+            <div id="exam-info-container" class="control-group exam-info">
+                <label>📚 Thông Tin Bài Thi:</label>
+                <div class="exam-info-details">
+                    <p><strong>Test ID:</strong> <span id="test-id">...</span></p>
+                    <p><strong>Exam ID:</strong> <span id="exam-id">...</span></p>
+                    <p><strong>Key Exam:</strong> <span id="key-exam">...</span></p>
+                </div>
+            </div>
+
+
             
             <!-- API Key Input -->
             <div class="control-group">

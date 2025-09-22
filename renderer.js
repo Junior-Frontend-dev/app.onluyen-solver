@@ -20,6 +20,8 @@ let isApiKeyVisible = false;
 let executedActionsCount = 0;
 let monitoringStartTime = Date.now();
 
+let scrapingInterval = null;
+
 // ============= DEFAULT SETTINGS =============
 const defaultSettings = {
     screenshotQuality: 70,
@@ -683,89 +685,139 @@ function parseActionsFromResponse(responseText) {
 async function executeAction(action) {
     console.log('Thực hiện action:', action);
     
-    try {
-        let result;
-        let x, y;
-        
-        if (action.ai_id !== undefined) {
-            if (!currentDomSnapshot) {
-                showNotification('Lỗi: Thiếu DOM snapshot để thực hiện hành động.', 'error');
-                return;
-            }
-            const element = currentDomSnapshot.find(el => el.ai_id === action.ai_id);
-            if (element) {
-                x = element.rect.centerX || (element.rect.x + element.rect.width / 2);
-                y = element.rect.centerY || (element.rect.y + element.rect.height / 2);
-                console.log(`Element ${action.ai_id} found at center (${x}, ${y})`);
-            } else {
-                showNotification(`Lỗi: Không tìm thấy phần tử với ai_id: ${action.ai_id}`, 'error');
-                return;
-            }
+    // This function now throws an error on failure, to be caught by the caller.
+    let result;
+    let element, sourceEl, targetEl;
+
+    // Helper to find element and coordinates from the local snapshot
+    const findElement = (ai_id) => {
+        if (ai_id === undefined) {
+            throw new Error("Hành động thiếu 'ai_id'.");
         }
-        
-        switch (action.type) {
-            case 'click':
-                if (x === undefined || y === undefined) {
-                    showNotification(`Lỗi: Hành động click thiếu ai_id.`, 'error');
-                    return;
-                }
-                showClickPosition(x, y);
-                result = await window.electronAPI.performClick(x, y);
-                await sleep(500);
-                hideClickPosition();
-                break;
-                
-            case 'type':
-                if (x === undefined || y === undefined) {
-                    showNotification(`Lỗi: Hành động type thiếu ai_id.`, 'error');
-                    return;
-                }
-                if (!action.text) {
-                    showNotification(`Lỗi: Hành động type thiếu text.`, 'error');
-                    return;
-                }
-                showClickPosition(x, y, 'type');
-                result = await window.electronAPI.performType(action.text, x, y);
-                await sleep(500);
-                hideClickPosition();
-                break;
-                
-            case 'clear':
-                if (x === undefined || y === undefined) {
-                    showNotification(`Lỗi: Hành động clear thiếu ai_id.`, 'error');
-                    return;
-                }
-                showClickPosition(x, y, 'clear');
-                result = await window.electronAPI.performClear(x, y);
-                await sleep(500);
-                hideClickPosition();
-                break;
-                
-            case 'scroll':
-                result = await window.electronAPI.performScroll(action.deltaY || 300);
-                break;
-                
-            case 'key':
-                result = await window.electronAPI.performKey(action.key || 'Enter');
-                break;
-                
-            case 'move':
-                console.log('Move action skipped');
-                return;
-                
-            default:
-                console.warn('Unknown action type:', action.type);
-                return;
+        if (!currentDomSnapshot) {
+            throw new Error('Thiếu DOM snapshot để tìm phần tử.');
         }
-        
-        executedActionsCount++;
-        
-        if (result && !result.success) {
-            showNotification(`Lỗi khi thực hiện hành động: ${result.error}`, 'error');
+        const el = currentDomSnapshot.find(e => e.ai_id === ai_id);
+        if (!el) {
+            // This is the error the user reported. We throw an error to be caught by the execution loop.
+            throw new Error(`Không tìm thấy phần tử với ai_id: ${ai_id}. DOM có thể đã thay đổi.`);
         }
-    } catch (error) {
-        console.error('Lỗi khi thực hiện action:', error);
-        showNotification('Lỗi nghiêm trọng khi thực hiện hành động.', 'error');
+        return el;
+    };
+
+    switch (action.type) {
+        // === Existing Actions (now more robust) ===
+        case 'click':
+            element = findElement(action.ai_id);
+            showClickPosition(element.rect.centerX, element.rect.centerY);
+            result = await window.electronAPI.performClick(element.rect.centerX, element.rect.centerY);
+            await sleep(500);
+            hideClickPosition();
+            break;
+            
+        case 'type':
+            element = findElement(action.ai_id);
+            if (action.text === undefined) throw new Error('Hành động type thiếu "text".');
+            showClickPosition(element.rect.centerX, element.rect.centerY, 'type');
+            result = await window.electronAPI.performType(action.text, element.rect.centerX, element.rect.centerY);
+            await sleep(500);
+            hideClickPosition();
+            break;
+            
+        case 'clear':
+            element = findElement(action.ai_id);
+            showClickPosition(element.rect.centerX, element.rect.centerY, 'clear');
+            result = await window.electronAPI.performClear(element.rect.centerX, element.rect.centerY);
+            await sleep(500);
+            hideClickPosition();
+            break;
+            
+        case 'scroll':
+            result = await window.electronAPI.performScroll(action.deltaY || 300);
+            break;
+            
+        case 'key':
+            if (!action.key) throw new Error('Hành động key thiếu "key".');
+            result = await window.electronAPI.performKey(action.key);
+            break;
+
+        // === New Actions ===
+        case 'wait':
+            if (!action.ms) throw new Error('Hành động wait thiếu "ms".');
+            await sleep(action.ms);
+            result = { success: true };
+            break;
+
+        case 'doubleClick':
+            element = findElement(action.ai_id);
+            showClickPosition(element.rect.centerX, element.rect.centerY);
+            result = await window.electronAPI.performDoubleClick(element.rect.centerX, element.rect.centerY);
+            await sleep(500);
+            hideClickPosition();
+            break;
+
+        case 'hover':
+            element = findElement(action.ai_id);
+            showClickPosition(element.rect.centerX, element.rect.centerY, 'hover');
+            result = await window.electronAPI.performHover(element.rect.centerX, element.rect.centerY);
+            await sleep(500);
+            hideClickPosition();
+            break;
+
+        case 'selectOption':
+            element = findElement(action.ai_id); // The <select> element
+            if (action.value === undefined) throw new Error('Hành động selectOption thiếu "value".');
+            result = await window.electronAPI.performSelectOption(action.ai_id, action.value);
+            break;
+
+        case 'dragAndDrop':
+            sourceEl = findElement(action.source_ai_id);
+            targetEl = findElement(action.target_ai_id);
+            const sourceCoords = { x: sourceEl.rect.centerX, y: sourceEl.rect.centerY };
+            const targetCoords = { x: targetEl.rect.centerX, y: targetEl.rect.centerY };
+            result = await window.electronAPI.performDragAndDrop(sourceCoords, targetCoords);
+            break;
+
+        case 'runScript':
+            if (!action.script) throw new Error('Hành động runScript thiếu "script".');
+            result = await window.electronAPI.performRunScript(action.script);
+            break;
+
+        case 'reload':
+            result = await window.electronAPI.performReload();
+            break;
+
+        case 'goBack':
+            result = await window.electronAPI.performGoBack();
+            break;
+
+        case 'scrollToElement':
+            element = findElement(action.ai_id);
+            result = await window.electronAPI.performScrollToElement(action.ai_id);
+            break;
+
+        case 'focus':
+            element = findElement(action.ai_id);
+            result = await window.electronAPI.performFocus(action.ai_id);
+            break;
+            
+        case 'move': // This was skipped before, now it's an alias for hover
+            element = findElement(action.ai_id);
+            showClickPosition(element.rect.centerX, element.rect.centerY, 'hover');
+            result = await window.electronAPI.performHover(element.rect.centerX, element.rect.centerY);
+            await sleep(500);
+            hideClickPosition();
+            break;
+            
+        default:
+            throw new Error(`Unknown action type: '${action.type}'`);
+    }
+    
+    executedActionsCount++;
+    
+    if (result && !result.success) {
+        // The error from main.js will be propagated here
+        throw new Error(result.error || `Hành động '${action.type}' thất bại.`);
     }
 }
 
@@ -1136,7 +1188,86 @@ function updatePerformanceStats() {
     if (cacheSizeEl) cacheSizeEl.textContent = `${cacheSizeKB} KB`;
 }
 
-// ============= MAIN INITIALIZATION =============
+// ============= LOCALSTORAGE EXTRACTION =============
+async function extractLocalStorageData() {
+    if (!webviewReady || !webviewElement) return;
+    if (!webviewElement.getURL().includes('app.onluyen.vn')) return;
+
+    const extractionScript = `
+(function() {
+  const result = [];
+
+  for (const [k, v] of Object.entries(localStorage)) {
+    try {
+      const obj = JSON.parse(v);
+
+      if (obj && (obj.testId || obj.examId)) {
+        result.push({
+          key: k,
+          testId: obj.testId || null,
+          examId: obj.examId || null,
+          userId: obj.userId || null,
+          userName: obj.userName || null,
+          classId: obj.classId || null,
+          schoolId: obj.schoolId || null,
+          logId: obj.logId || null,
+          keyExam: obj.key_exam || null,
+
+          type: obj.type || null,
+          status: obj.status || null,
+          startTime: obj.startTime || obj.timeStart || null,
+          endTime: obj.endTime || obj.timeEnd || null,
+          duration: obj.duration || obj.timeDoing || null,
+          score: obj.score || obj.point || null,
+
+          answers: Array.isArray(obj.data) ? obj.data.map(d => ({
+            stepId: d.stepId,
+            questionId: d.questionId || null,
+            optionId: d.dataOptionId || null,
+            optionText: d.dataOptionText || null,
+            isCorrect: d.isCorrect ?? null
+          })) : null,
+
+          raw: obj
+        });
+      }
+    } catch(e){}
+  }
+  return result;
+})();
+    `;
+
+    try {
+        const data = await webviewElement.executeJavaScript(extractionScript);
+        console.log('Extracted data from webview localStorage:', data);
+
+        const userNameEl = document.getElementById('user-name');
+        const userIdEl = document.getElementById('user-id');
+        const testIdEl = document.getElementById('test-id');
+        const examIdEl = document.getElementById('exam-id');
+        const keyExamEl = document.getElementById('key-exam');
+
+        if (data && data.length > 0) {
+            const info = data[0];
+            if (userNameEl) userNameEl.textContent = info.userName || 'N/A';
+            if (userIdEl) userIdEl.textContent = info.userId || 'N/A';
+            if (testIdEl) testIdEl.textContent = info.testId || 'N/A';
+            if (examIdEl) examIdEl.textContent = info.examId || 'N/A';
+            if (keyExamEl) keyExamEl.textContent = info.keyExam || 'N/A';
+        } else {
+            if (userNameEl) userNameEl.textContent = '...';
+            if (userIdEl) userIdEl.textContent = '...';
+            if (testIdEl) testIdEl.textContent = '...';
+            if (examIdEl) examIdEl.textContent = '...';
+            if (keyExamEl) keyExamEl.textContent = '...';
+        }
+
+    } catch (e) {
+        console.error('Error during webview localStorage extraction:', e);
+    }
+}
+
+    // ============= MAIN INITIALIZATION =============
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded - Initializing app...');
     
@@ -1148,6 +1279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('❌ Lỗi nghiêm trọng: Không tìm thấy webview', 'error');
         return;
     }
+
     
     // Initialize settings
     loadSettings();
@@ -1645,8 +1777,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('Auto-enabling fake events...');
                     await enableFakeEvents();
                 }
-                
-                showNotification('✅ Ứng dụng đã sẵn sàng!', 'success');
+
+                // Start a 5-second interval for continuous scraping
+                if (scrapingInterval) clearInterval(scrapingInterval);
+                scrapingInterval = setInterval(extractLocalStorageData, 5000);
             } else {
                 console.warn('Webview test failed, will retry...');
                 webviewReady = false;
@@ -1669,6 +1803,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     webviewElement.addEventListener('did-start-loading', () => {
         console.log('Webview started loading');
+        if (scrapingInterval) {
+            clearInterval(scrapingInterval);
+            scrapingInterval = null;
+        }
         webviewReady = false;
         pendingInjections = []; // Clear pending injections when loading new page
     });
@@ -1746,6 +1884,8 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('gemini_api_keys_data', JSON.stringify(data));
         updateApiKeyStatus();
     });
+
+
     
     // ============= KEYBOARD SHORTCUTS =============
     
