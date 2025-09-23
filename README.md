@@ -142,6 +142,10 @@ Chúng tôi hoan nghênh mọi hình thức đóng góp. Vui lòng **Fork** kho 
 
 Xin chân thành cảm ơn bạn đã quan tâm và sử dụng dự án OnLuyen.vn AI Assistant. Sự ủng hộ của bạn là nguồn động lực to lớn để chúng tôi tiếp tục phát triển và cải tiến công cụ này, với hy vọng mang lại một phương pháp học tập hiệu quả và đột phá hơn cho cộng đồng.
 
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Junior-Frontend-dev/app.onluyen-solver&type=Date)](https://www.star-history.com/#Junior-Frontend-dev/app.onluyen-solver&Date)
+
 ---
 <div align="center">
   <em>Được build with love bởi Junior-Frontend-dev và Trongdepzai-dev</em>
