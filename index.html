@@ -1,680 +1,100 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OnLuyen.vn với Gemini AI Assistant</title>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <title>OnLuyen Solver</title>
     <link rel="stylesheet" href="style.css">
-    
-    <style>
-        /* Anti-tracking controls styling */
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .badge-info {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .badge-warning {
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-            color: white;
-        }
-
-        #activity-level {
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            color: #333;
-            min-width: 150px;
-        }
-
-        #activity-level option {
-            background: white;
-            color: #333;
-        }
-
-        .checkbox-label {
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .checkbox-label input[type="checkbox"] {
-            cursor: pointer;
-        }
-
-        #fake-event-username {
-            font-family: 'JetBrains Mono', monospace;
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            transition: border-color 0.3s;
-        }
-
-        #fake-event-username:focus {
-            border-color: #f39c12;
-            outline: none;
-        }
-
-        #fake-event-username.valid {
-            border-color: #27ae60;
-        }
-
-        #fake-event-username.invalid {
-            border-color: #e74c3c;
-        }
-
-        .user-info {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border: 1px solid #e0e0e0;
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .user-info label {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-            display: block;
-        }
-        .user-info-details p {
-            margin: 4px 0;
-            font-size: 13px;
-            color: #555;
-        }
-        .user-info-details p strong {
-            color: #111;
-        }
-        .user-info-details span {
-            font-family: 'JetBrains Mono', monospace;
-            background-color: rgba(255,255,255,0.5);
-            padding: 2px 4px;
-            border-radius: 4px;
-        }
-
-        .exam-info {
-            background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
-            border: 1px solid #a5d6a7;
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .exam-info label {
-            font-weight: 600;
-            color: #004d40;
-            margin-bottom: 8px;
-            display: block;
-        }
-        .exam-info-details p {
-            margin: 4px 0;
-            font-size: 13px;
-            color: #00695c;
-        }
-        .exam-info-details p strong {
-            color: #004d40;
-        }
-        .exam-info-details span {
-            font-family: 'JetBrains Mono', monospace;
-            background-color: rgba(255,255,255,0.6);
-            padding: 2px 4px;
-            border-radius: 4px;
-            word-break: break-all;
-        }
-
-
-    </style>
 </head>
 <body>
-    <!-- Settings Button -->
-    <button id="settings-btn" class="settings-float-btn" title="Cài đặt">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 1v6m0 6v6m4.22-13.22l4.24 4.24M1.54 1.54l4.24 4.24M20.46 20.46l-4.24-4.24M1.54 20.46l4.24-4.24M22 12h-6m-6 0H1"/>
-        </svg>
-    </button>
-
-    <!-- Performance Indicator -->
-    <div id="performance-indicator" class="performance-indicator good" draggable="true">
-        <span id="perf-text">Performance: Good</span>
-        <button id="close-perf-indicator" class="perf-close-btn">&times;</button>
-    </div>
-
-    <div class="container">
-        <!-- Webview hiển thị trang OnLuyen -->
-        <div class="webview-container">
+    <div class="app-wrapper">
+        <div class="browser-container">
             <!-- Navigation Bar -->
-            <div class="navigation-bar">
-                <div id="perf-indicator-condensed" class="perf-indicator-condensed hidden" title="Hiển thị Performance">
-                    <div class="perf-dot good"></div>
-                </div>
+            <div class="nav-bar">
                 <div class="nav-controls">
                     <button id="back-btn" class="nav-btn" title="Quay lại" disabled>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 12H5M12 19l-7-7 7-7"/>
-                        </svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                     </button>
                     <button id="forward-btn" class="nav-btn" title="Tiến tới" disabled>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </button>
                     <button id="reload-btn" class="nav-btn" title="Tải lại">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-                        </svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
                     </button>
                     <button id="home-btn" class="nav-btn" title="Trang chủ">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-                        </svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </button>
                 </div>
-                <div class="url-bar-container">
-                    <input type="text" id="url-bar" class="url-bar" placeholder="Nhập URL..." />
-                    <button id="go-btn" class="nav-btn" title="Đi tới">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </button>
+                
+                <div class="url-container">
+                    <input type="text" id="url-input" class="url-input" value="https://app.onluyen.vn/" placeholder="Nhập địa chỉ URL...">
+                    <button id="go-btn" class="go-btn">Go</button>
+                </div>
+
+                <div id="status-indicator" class="status-indicator">
+                    <span id="status-dot" class="status-dot"></span>
+                    <span id="status-text">Mạng bình thường</span>
                 </div>
             </div>
             
-            <!-- Overlay hiển thị vị trí click -->
-            <div id="click-overlay" class="click-overlay hidden"></div>
-            
-            <webview 
-                id="onluyen-webview" 
-                src="https://app.onluyen.vn/"
-                partition="persist:onluyen"
-                allowpopups
-                webpreferences="webSecurity=no"
-            ></webview>
+            <!-- Webview -->
+            <webview id="webview" class="webview" partition="persist:webview" webpreferences="contextIsolation=no" useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>
+
+            <!-- Advanced Network Panel -->
+            <div id="advanced-network-panel" class="advanced-network-panel">
+                <h3>Advanced Network Control</h3>
+                <p id="request-counter">Blocked Requests: 0</p>
+                <button id="clear-requests-btn">Clear Queue</button>
+                <ul id="request-list"></ul>
+            </div>
         </div>
 
-        <!-- Sidebar điều khiển -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h2>🤖 AI Assistant Control Panel</h2>
-                <button id="pop-out-btn" class="pop-out-btn" title="Mở trong cửa sổ mới">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <line x1="10" y1="14" x2="21" y2="3"></line>
-                    </svg>
+        <div class="right-panel">
+            <div class="action-controls">
+                <button id="scrape-btn" class="block-btn" title="Lấy câu hỏi và giải">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span>Giải</span>
+                </button>
+                <button id="block-network-btn" class="block-btn" title="Chặn/Bỏ chặn mạng (F2)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>
+                    <span>Chặn</span>
+                </button>
+                <button id="advanced-network-toggle-btn" class="block-btn" title="Hiển thị cài đặt mạng nâng cao">
+                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 4.9C10.2 4.4 9.5 4 8.5 4H6"/><path d="M13.3 20.1c.5.5 1.2.9 2.2.9H18"/><path d="M4.9 10.7C4.4 10.2 4 9.5 4 8.5V6"/><path d="M20.1 13.3c.5-.5.9-1.2.9-2.2V9"/><path d="M6.5 17.5c0-1.2.4-2.3.9-3.2"/><path d="M17.5 6.5c0 1.2-.4 2.3-.9 3.2"/></svg>
+                    <span>Nâng cao</span>
+                </button>
+                <button id="settings-btn" class="block-btn" title="Cài đặt API Key">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>Cài đặt</span>
                 </button>
             </div>
-
-            <!-- User Info Display -->
-            <div id="user-info-container" class="control-group user-info">
-                <label>👤 Thông Tin Người Dùng:</label>
-                <div class="user-info-details">
-                    <p><strong>Tên:</strong> <span id="user-name">...</span></p>
-                    <p><strong>User ID:</strong> <span id="user-id">...</span></p>
-                </div>
-            </div>
-
-            <!-- Exam Info Display -->
-            <div id="exam-info-container" class="control-group exam-info">
-                <label>📚 Thông Tin Bài Thi:</label>
-                <div class="exam-info-details">
-                    <p><strong>Test ID:</strong> <span id="test-id">...</span></p>
-                    <p><strong>Exam ID:</strong> <span id="exam-id">...</span></p>
-                    <p><strong>Key Exam:</strong> <span id="key-exam">...</span></p>
-                </div>
-            </div>
-
-
-            
-            <!-- API Key Input -->
-            <div class="control-group">
-                <label for="api-key">Gemini API Keys (một key mỗi dòng):</label>
-                <textarea 
-                    id="api-key" 
-                    placeholder="Dán một hoặc nhiều API Key vào đây, mỗi key trên một dòng..."
-                    rows="4"
-                ></textarea>
-                <small>
-                    <a href="#" id="save-api-key" style="color: #27ae60;">💾 Lưu Keys</a>
-                    <span id="api-key-status" style="margin-left: 10px;"></span>
-                    <button id="toggle-api-key-visibility-btn" class="key-toggle-btn" title="Hiện/Ẩn Key">
-                        <svg class="icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        <svg class="icon-eye-off hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                    </button>
-                </small>
-            </div>
-
-            <!-- Model Selection -->
-            <div class="control-group">
-                <label for="ai-model">Chọn Model:</label>
-                <select id="ai-model">
-                    <optgroup label="Gemini 2.5 Series (Mới nhất)">
-                        <option value="gemini-2.5-flash" selected>⚡ Gemini 2.5 Flash (Nhanh, hiệu quả)</option>
-                        <option value="gemini-2.5-flash-lite">💨 Gemini 2.5 Flash Lite (Siêu nhanh)</option>
-                        <option value="gemini-2.5-pro">🚀 Gemini 2.5 Pro (Mạnh nhất)</option>
-                    </optgroup>
-                    <optgroup label="Gemini 2.0 Series">
-                        <option value="gemini-2.0-flash-exp">🧪 Gemini 2.0 Flash Experimental</option>
-                    </optgroup>
-                    <optgroup label="Gemini 1.5 Series">
-                        <option value="gemini-1.5-flash">⚡ Gemini 1.5 Flash</option>
-                        <option value="gemini-1.5-pro">💎 Gemini 1.5 Pro</option>
-                    </optgroup>
-                </select>
-                <small style="color: #666;">
-                    💡 Khuyến nghị: 2.5 Flash cho cân bằng tốc độ và chất lượng
-                </small>
-            </div>
-
-            <!-- Anti-Tracking Toggle -->
-            <div class="control-group">
-                <label for="anti-tracking-toggle">
-                    <span style="display: inline-flex; align-items: center; gap: 8px;">
-                        🛡️ Chế độ Không Theo Dõi
-                        <span class="badge badge-info" style="font-size: 10px;">BETA</span>
-                    </span>
-                </label>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <label class="switch">
-                        <input type="checkbox" id="anti-tracking-toggle">
-                        <span class="slider"></span>
-                    </label>
-                    <select id="activity-level" style="flex: 1; padding: 5px;">
-                        <option value="low">Hoạt động thấp</option>
-                        <option value="normal" selected>Hoạt động bình thường</option>
-                        <option value="high">Hoạt động cao</option>
-                    </select>
-                </div>
-                <small style="color: #666; display: block; margin-top: 5px;">
-                    ⚡ Giả lập hoạt động người dùng, chống tracking, bypass AFK detection
-                </small>
-            </div>
-
-            <!-- Fake Event Out Screen -->
-            <div class="control-group">
-                <label for="fake-event-toggle">
-                    <span style="display: inline-flex; align-items: center; gap: 8px;">
-                        🎭 Fake Event Out Screen
-                        <span class="badge badge-warning" style="font-size: 10px;">ADVANCED</span>
-                    </span>
-                </label>
-                
-                <!-- Username Input -->
-                <div style="margin: 10px 0;">
-                    <input 
-                        type="text" 
-                        id="fake-event-username" 
-                        placeholder="Nhập email (vd: tronghb20@haiphong.edu.vn)"
-                        style="width: 100%; padding: 8px; margin-bottom: 10px;"
-                    />
-                </div>
-                
-                <!-- Toggle and Settings -->
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <label class="switch">
-                        <input type="checkbox" id="fake-event-toggle">
-                        <span class="slider"></span>
-                    </label>
-                    
-                    <select id="fake-event-interval" style="flex: 1; padding: 5px;">
-                        <option value="10000">Mỗi 10 giây</option>
-                        <option value="30000" selected>Mỗi 30 giây</option>
-                        <option value="60000">Mỗi 1 phút</option>
-                        <option value="120000">Mỗi 2 phút</option>
-                        <option value="300000">Mỗi 5 phút</option>
-                    </select>
-                    
-                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 5px;">
-                        <input type="checkbox" id="fake-event-auto-mode">
-                        <span style="font-size: 12px;">Auto</span>
-                    </label>
-                </div>
-                
-                <!-- Advanced Settings (Initially Hidden) -->
-                <div id="fake-event-advanced" style="display: none; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 5px;">
-                    <small style="display: block; margin-bottom: 5px; font-weight: 600;">IDs (Tùy chọn):</small>
-                    <input type="text" id="fake-event-test-id" placeholder="Test ID" style="width: 100%; padding: 5px; margin-bottom: 5px; font-size: 12px;">
-                    <input type="text" id="fake-event-exam-id" placeholder="Exam ID" style="width: 100%; padding: 5px; margin-bottom: 5px; font-size: 12px;">
-                    <input type="text" id="fake-event-user-id" placeholder="User ID" style="width: 100%; padding: 5px; font-size: 12px;">
-                </div>
-                
-                <small style="color: #666; display: block; margin-top: 5px;">
-                    🎯 Giả lập sự kiện người dùng rời màn hình, bypass hệ thống giám sát
-                </small>
-                
-                <!-- Show Advanced Button -->
-                <a href="#" id="toggle-fake-event-advanced" style="font-size: 12px; color: #667eea; text-decoration: none;">
-                    ⚙️ Cài đặt nâng cao
-                </a>
-            </div>
-
-            <!-- Custom Prompt -->
-            <div class="control-group">
-                <label for="custom-prompt">Lời nhắn cho AI (tùy chọn):</label>
-                <textarea 
-                    id="custom-prompt" 
-                    placeholder="Ví dụ:&#10;- Giải chi tiết câu hỏi này&#10;- Chọn đáp án đúng và giải thích&#10;- Làm tất cả các câu trong trang&#10;- Nộp bài sau khi hoàn thành"
-                    rows="4"
-                ></textarea>
-                <small style="color: #666;">
-                    💡 AI sẽ tự động phân tích và giải bài tập
-                </small>
-            </div>
-
-            <!-- Mode Selection -->
-            <div class="mode-selection">
-                <label>Chế độ AI:</label>
-                <div class="radio-group">
-                    <label class="radio-label">
-                        <input type="radio" name="ai-mode" value="analyze" checked>
-                        <span>📊 Phân tích</span>
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="ai-mode" value="action">
-                        <span>🎯 Thực hiện hành động</span>
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="ai-mode" value="auto">
-                        <span>🔄 Tự động</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Nút chụp và gửi -->
-            <button id="capture-and-send-btn" class="btn btn-primary">
-                📸 Chụp và Gửi AI
-            </button>
-
-            <!-- Hiển thị ảnh đã chụp -->
-            <div class="screenshot-preview">
-                <h3>📷 Ảnh Đã Chụp:</h3>
-                <div id="screenshot-container">
-                    <p class="placeholder">Chưa có ảnh nào</p>
-                </div>
-            </div>
-
-            <!-- Action Controls -->
-            <div id="action-controls" class="action-controls hidden">
-                <h3>🎮 Điều khiển hành động:</h3>
-                <div class="action-buttons">
-                    <button id="execute-all-btn" class="btn btn-action">
-                        ▶️ Thực hiện tất cả
-                    </button>
-                    <button id="execute-step-btn" class="btn btn-action">
-                        ⏭️ Thực hiện từng bước
-                    </button>
-                    <button id="stop-btn" class="btn btn-danger">
-                        ⏹️ Dừng
-                    </button>
-                </div>
-                
-                <!-- Actions Queue -->
-                <div id="actions-queue" class="actions-queue">
-                    <h4>📋 Danh sách hành động:</h4>
-                    <div id="actions-list" class="actions-list">
-                        <p class="placeholder">Chưa có hành động nào</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Loading indicator -->
-            <div id="loading" class="loading hidden">
-                <div class="spinner"></div>
-                <span>Đang xử lý...</span>
-            </div>
-
-            <!-- Hiển thị kết quả từ Gemini -->
-            <div class="result-container">
-                <h3>💡 Kết Quả AI:</h3>
-                <div id="gemini-result">
-                    <p class="placeholder">Chưa có kết quả</p>
-                </div>
-            </div>
-
-            <!-- Knowledge Base Section -->
-            <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px solid #eee;">
-            <div class="knowledge-base-section">
-                <h2>📚 Knowledge Base & RAG</h2>
-                
-                <div class="control-group">
-                    <label for="kb-question">Question:</label>
-                    <textarea id="kb-question" rows="2" placeholder="Enter question for knowledge base"></textarea>
-                </div>
-                <div class="control-group">
-                    <label for="kb-answer">Answer:</label>
-                    <textarea id="kb-answer" rows="4" placeholder="Enter answer for knowledge base"></textarea>
-                </div>
-                <button id="save-knowledge-btn" class="btn btn-primary" style="margin-bottom: 20px;">💾 Save Knowledge</button>
-        
-                <hr style="margin-top: 20px; margin-bottom: 20px; border: 0; border-top: 1px dashed #ccc;">
-        
-                <h3>Ask RAG:</h3>
-                <div class="control-group">
-                    <label for="rag-query-input">Your Query:</label>
-                    <textarea id="rag-query-input" rows="2" placeholder="Ask a question to the RAG system"></textarea>
-                </div>
-                <button id="rag-query-btn" class="btn btn-success" style="margin-bottom: 20px;">❓ Ask RAG</button>
-        
-                <h3>RAG Response:</h3>
-                <div id="rag-response">
-                    <p class="placeholder">RAG response will appear here.</p>
-                </div>
-            </div>
-
-            <!-- Footer info -->
-            <div class="footer-info">
-                <p>💡 <strong>Hướng dẫn:</strong></p>
-                <ol>
-                    <li>Nhập API Key Gemini</li>
-                    <li>Chọn chế độ AI</li>
-                    <li>Chụp màn hình trang web</li>
-                    <li>Gửi tới Gemini AI</li>
-                    <li>AI sẽ phân tích và thực hiện</li>
-                </ol>
-                <p style="margin-top: 10px;">
-                    <strong>Phím tắt:</strong><br>
-                    • Ctrl+S: Chụp màn hình<br>
-                    • Ctrl+Enter: Gửi AI<br>
-                    • Ctrl+A: Toggle Auto Mode<br>
-                    • F12: Dev Console
-                </p>
-            </div>
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-backdrop"></div>
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2>⚙️ Cài Đặt Performance</h2>
-                <button class="modal-close" id="close-settings">✕</button>
-            </div>
+            <h2>Cài đặt Gemini API Key</h2>
+            <p>Để sử dụng tính năng giải bài tập bằng AI, bạn cần cung cấp API Key từ Google AI Studio.</p>
+            <input type="password" id="api-key-input" placeholder="Dán API Key của bạn vào đây...">
             
-            <div class="modal-body">
-                <!-- Performance Settings Section -->
-                <div class="settings-section">
-                    <h3>🚀 Tối Ưu Hiệu Năng</h3>
-                    
-                    <!-- Screenshot Quality -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="screenshot-quality">📸 Screenshot Quality</label>
-                            <small>Giảm chất lượng ảnh để tăng tốc độ</small>
-                        </div>
-                        <div class="setting-control">
-                            <input type="range" id="screenshot-quality" min="30" max="100" value="70" step="10">
-                            <span id="quality-value">70%</span>
-                        </div>
-                    </div>
-
-                    <!-- Dev Console -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="auto-dev-console">🔧 Auto Open Dev Console</label>
-                            <small>Tắt để giảm RAM usage khi khởi động</small>
-                        </div>
-                        <div class="setting-control">
-                            <label class="switch">
-                                <input type="checkbox" id="auto-dev-console" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- DOM Snapshot Limit -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="dom-limit">📄 DOM Snapshot Limit</label>
-                            <small>Giảm số elements để phân tích nhanh hơn</small>
-                        </div>
-                        <div class="setting-control">
-                            <input type="range" id="dom-limit" min="20" max="200" value="100" step="20">
-                            <span id="dom-value">100</span>
-                        </div>
-                    </div>
-
-                    <!-- Lazy Load -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="lazy-load">⚡ Lazy Load Components</label>
-                            <small>Chỉ load components khi cần thiết</small>
-                        </div>
-                        <div class="setting-control">
-                            <label class="switch">
-                                <input type="checkbox" id="lazy-load" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Animation -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="reduce-animation">🎨 Reduce Animations</label>
-                            <small>Tắt animation để tăng FPS</small>
-                        </div>
-                        <div class="setting-control">
-                            <label class="switch">
-                                <input type="checkbox" id="reduce-animation">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Disable Notifications -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="disable-notifications">🔕 Disable Notifications</label>
-                            <small>Tắt tất cả thông báo pop-up</small>
-                        </div>
-                        <div class="setting-control">
-                            <label class="switch">
-                                <input type="checkbox" id="disable-notifications">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Auto Mode Delay -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="auto-delay">⏱️ Auto Mode Delay (ms)</label>
-                            <small>Thời gian chờ giữa các action</small>
-                        </div>
-                        <div class="setting-control">
-                            <input type="range" id="auto-delay" min="100" max="2000" value="500" step="100">
-                            <span id="delay-value">500ms</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Advanced Settings -->
-                <div class="settings-section">
-                    <h3>🔬 Cài Đặt Nâng Cao</h3>
-                    
-                    <!-- Cache -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="enable-cache">💾 Enable Response Cache</label>
-                            <small>Cache API responses để giảm requests</small>
-                        </div>
-                        <div class="setting-control">
-                            <label class="switch">
-                                <input type="checkbox" id="enable-cache" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Debug Mode -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="debug-mode">🐛 Debug Mode</label>
-                            <small>Hiển thị logs chi tiết</small>
-                        </div>
-                        <div class="setting-control">
-                            <label class="switch">
-                                <input type="checkbox" id="debug-mode">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Output Language -->
-                    <div class="setting-item">
-                        <div class="setting-info">
-                            <label for="output-language">🌐 Output Language</label>
-                            <small>Ngôn ngữ cho câu trả lời của AI</small>
-                        </div>
-                        <div class="setting-control">
-                            <input type="text" id="output-language" value="Tiếng Việt">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Performance Stats -->
-                <div class="settings-section">
-                    <h3>📊 Performance Stats</h3>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <span class="stat-label">RAM Usage</span>
-                            <span class="stat-value" id="ram-usage">0 MB</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">FPS</span>
-                            <span class="stat-value" id="fps-counter">60</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">Actions/Min</span>
-                            <span class="stat-value" id="actions-per-min">0</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">Cache Size</span>
-                            <span class="stat-value" id="cache-size">0 KB</span>
-                        </div>
-                    </div>
-                </div>
+            <div class="setting-row">
+                <label for="model-select">Chọn Model AI:</label>
+                <select id="model-select">
+                    <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro</option>
+                    <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash</option>
+                </select>
             </div>
-            
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="reset-settings">🔄 Reset to Default</button>
-                <button class="btn btn-primary" id="save-settings">💾 Save Settings</button>
+
+            <div class="modal-actions">
+                <button id="save-api-key-btn">Lưu & Đóng</button>
+                <button id="close-modal-btn">Hủy</button>
             </div>
         </div>
     </div>
-
+    
     <script src="renderer.js"></script>
 </body>
 </html>
