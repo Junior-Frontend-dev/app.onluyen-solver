@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
     <title>OnLuyen Solver</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -48,6 +48,25 @@
                 <p id="request-counter">Blocked Requests: 0</p>
                 <button id="clear-requests-btn">Clear Queue</button>
                 <ul id="request-list"></ul>
+
+                <h3 style="margin-top: 20px;">Local Storage Editor</h3>
+                <div class="local-storage-editor">
+                    <div class="ls-controls">
+                        <button id="ls-refresh-btn">Refresh</button>
+                        <button id="ls-add-btn">Add New</button>
+                        <button id="ls-delete-btn" disabled>Delete Selected</button>
+                    </div>
+                    <select id="ls-key-select" size="5">
+                        <!-- Options will be populated by JS -->
+                    </select>
+                    <div class="ls-edit-form">
+                        <label for="ls-key-input">Key:</label>
+                        <input type="text" id="ls-key-input">
+                        <label for="ls-value-input">Value:</label>
+                        <textarea id="ls-value-input"></textarea>
+                        <button id="ls-save-btn">Save</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -62,14 +81,34 @@
                     <span>Chặn</span>
                 </button>
                 <button id="advanced-network-toggle-btn" class="block-btn" title="Hiển thị cài đặt mạng nâng cao">
-                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 4.9C10.2 4.4 9.5 4 8.5 4H6"/><path d="M13.3 20.1c.5.5 1.2.9 2.2.9H18"/><path d="M4.9 10.7C4.4 10.2 4 9.5 4 8.5V6"/><path d="M20.1 13.3c.5-.5.9-1.2.9-2.2V9"/><path d="M6.5 17.5c0-1.2.4-2.3.9-3.2"/><path d="M17.5 6.5c0 1.2-.4 2.3-.9 3.2"/></svg>
+                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
                     <span>Nâng cao</span>
                 </button>
                 <button id="settings-btn" class="block-btn" title="Cài đặt API Key">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     <span>Cài đặt</span>
                 </button>
+                <button id="chat-btn" class="block-btn" title="Chat with AI">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    <span>Chat</span>
+                </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Chat with AI Popup -->
+    <div id="chat-popup" class="chat-popup-container">
+        <div id="chat-popup-header" class="chat-popup-header">
+            <span>Chat with AI</span>
+            <button id="chat-popup-close-btn">&times;</button>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-area">
+            <button id="chat-screenshot-btn" title="Chụp màn hình">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            </button>
+            <input type="text" id="chat-prompt-input" placeholder="Hỏi AI về hình ảnh...">
+            <button id="chat-send-btn">Gửi</button>
         </div>
     </div>
 
@@ -83,9 +122,39 @@
             <div class="setting-row">
                 <label for="model-select">Chọn Model AI:</label>
                 <select id="model-select">
-                    <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro</option>
-                    <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
                 </select>
+            </div>
+
+            <div class="setting-row">
+                <label for="vision-model-select">Chọn Model Vision:</label>
+                <select id="vision-model-select">
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                </select>
+            </div>
+
+            <div class="setting-row">
+                <label for="deep-reasoning-toggle">Chế độ suy luận sâu:</label>
+                <input type="checkbox" id="deep-reasoning-toggle" class="toggle-switch">
+            </div>
+
+            <div class="setting-row">
+                <label for="fast-mode-toggle">Chế độ Nhanh (Không suy nghĩ):</label>
+                <input type="checkbox" id="fast-mode-toggle" class="toggle-switch">
+            </div>
+
+            <div class="setting-row">
+                <label for="google-search-toggle">Sử dụng Google Search:</label>
+                <input type="checkbox" id="google-search-toggle" class="toggle-switch">
+            </div>
+
+            <div class="setting-row">
+                <label for="auto-bypass-cheat-toggle">Tự động bỏ qua thông báo gian lận:</label>
+                <input type="checkbox" id="auto-bypass-cheat-toggle" class="toggle-switch">
             </div>
 
             <div class="modal-actions">
@@ -96,5 +165,6 @@
     </div>
     
     <script src="renderer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </body>
 </html>

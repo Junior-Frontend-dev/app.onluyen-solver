@@ -11,7 +11,7 @@
         questionCount: 0,
         retryCount: 0,
         geminiApiKey: null,
-        selectedModel: 'gemini-1.5-flash-latest',
+        selectedModel: 'gemini-2.5-flash',
         isAiSolving: false,
     };
 
@@ -52,6 +52,16 @@
                 state.questionCount++;
                 console.log(`📝 Added question: ${question.id} (Total: ${state.questionCount})`);
                 updateProgress(`Đã lấy ${state.questionCount} câu. Đang tìm câu tiếp theo...`);
+
+                // Add question to the display panel
+                const questionsList = document.getElementById('solver-questions-list');
+                if (questionsList) {
+                    const questionItem = document.createElement('div');
+                    questionItem.className = 'solver-question-item';
+                    questionItem.textContent = question.text;
+                    questionsList.appendChild(questionItem);
+                    questionsList.scrollTop = questionsList.scrollHeight; // Auto-scroll to bottom
+                }
             }
 
             // New, more robust button finding logic
@@ -80,7 +90,14 @@
         if (state.geminiApiKey && state.allResults) {
             state.isAiSolving = true;
             updateProgress("Đang gửi câu hỏi đến Gemini AI...");
-            sendToGeminiAI(state.allResults, document.getElementById('ai-content'));
+            showFinalResultUI(); // Create the final UI elements first
+            const aiContentEl = document.getElementById('ai-content');
+            if (aiContentEl) {
+                sendToGeminiAI(state.allResults, aiContentEl);
+            } else {
+                console.error("Could not find #ai-content element after UI creation.");
+                updateProgress("Lỗi giao diện!", true);
+            }
         } else {
             updateProgress("Hoàn thành!", true);
         }
@@ -102,6 +119,21 @@
             .solver-results-button { background: #4a90e2; }
             .solver-results-button:hover { background: #357abd; }
             .solver-ai-content { white-space: pre-wrap; font-size: 14px; line-height: 1.6; font-family: monospace; background: rgba(0,0,0,0.1); padding: 15px; border-radius: 8px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+            .solver-ai-content thinking {
+                display: block;
+                background: rgba(255, 255, 255, 0.05);
+                border-left: 3px solid #4a90e2;
+                padding: 10px;
+                margin-bottom: 15px;
+                border-radius: 4px;
+                font-style: italic;
+                color: #ccc;
+                white-space: pre-wrap;
+            }
+            .solver-questions-panel { position: fixed; top: 20px; right: 20px; width: 350px; max-height: 80vh; background: rgba(44, 62, 80, 0.9); color: white; border-radius: 10px; z-index: 10000; box-shadow: 0 5px 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; font-family: 'Segoe UI', sans-serif; animation: fadeIn 0.5s ease; }
+            .solver-questions-header { padding: 15px; background: rgba(0,0,0,0.2); font-weight: 600; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+            .solver-questions-list { padding: 15px; overflow-y: auto; flex-grow: 1; }
+            .solver-question-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-bottom: 10px; white-space: pre-wrap; font-size: 13px; line-height: 1.5; }
         `;
         document.head.appendChild(style);
 
@@ -115,6 +147,16 @@
             <button id="solver-stop-btn" class="solver-button">Dừng</button>
         `;
         document.body.appendChild(ui.container);
+
+        // Create the questions display panel
+        const questionsPanel = document.createElement('div');
+        questionsPanel.className = 'solver-questions-panel';
+        questionsPanel.innerHTML = `
+            <div class="solver-questions-header">Các câu hỏi đã lấy</div>
+            <div id="solver-questions-list" class="solver-questions-list"></div>
+        `;
+        document.body.appendChild(questionsPanel);
+
 
         document.getElementById('solver-stop-btn').onclick = handleStopClick;
     }
@@ -130,6 +172,8 @@
         if (state.isAiSolving) {
             // If AI is solving, the button should close the whole thing
             if (ui.container) ui.container.remove();
+            const questionsPanel = document.querySelector('.solver-questions-panel');
+            if (questionsPanel) questionsPanel.remove();
         } else {
             state.stopRequested = true;
             updateProgress("Đang dừng...");
@@ -141,7 +185,11 @@
         const stopBtn = document.getElementById('solver-stop-btn');
         stopBtn.textContent = 'Đóng';
         stopBtn.className = 'solver-button solver-results-button';
-        stopBtn.onclick = () => { if (ui.container) ui.container.remove(); };
+        stopBtn.onclick = () => { 
+            if (ui.container) ui.container.remove(); 
+            const questionsPanel = document.querySelector('.solver-questions-panel');
+            if (questionsPanel) questionsPanel.remove();
+        };
 
         const copyBtn = document.createElement('button');
         copyBtn.textContent = 'CopyCâu Hỏi';
@@ -259,48 +307,31 @@ ${cauText} - TRẮC NGHIỆM
 
 
     async function sendToGeminiAI(content, aiResponseEl) {
-        console.log("🤖 Sending to Gemini AI...");
-        showFinalResultUI(); // Show the results UI now
+        console.log("🤖 Sending to Gemini AI via main process...");
         updateProgress("Đang nhận đáp án từ AI...", false);
+        
+        let fullResponse = "";
+        aiResponseEl.parentElement.style.display = 'block';
 
-        try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${state.selectedModel}:generateContent?key=${state.geminiApiKey}&alt=sse`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `You are an expert in solving academic questions. Provide only the final, concise answer based on the question type, without explanations. For multiple choice, give the letter (e.g., 'A'). For fill-in-the-blank, give the value (e.g., '4,5 cm'). For true/false, give the sequence (e.g., 'Đ S Đ S'). Your final output must only contain the answers, numbered for each question. Here are the questions:\n\n${content}` }] }],
-                    generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
-                })
-            });
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let fullResponse = "";
-            aiResponseEl.parentElement.style.display = 'block';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const jsonObj = JSON.parse(line.substring(6));
-                            fullResponse += jsonObj.candidates[0].content.parts[0].text;
-                            aiResponseEl.textContent = fullResponse.trim();
-                        } catch (e) { /* Ignore */ }
-                    }
-                }
+        window.electronAPI.onGeminiChunk(({ text }) => {
+            if (text) {
+                fullResponse += text;
+                aiResponseEl.innerHTML = fullResponse.trim(); // Use innerHTML to render the <thinking> tag
             }
+        });
+
+        window.electronAPI.onGeminiEnd(() => {
+            console.log("✅ Gemini stream finished.");
             updateProgress("Hoàn thành!", true);
-        } catch (error) {
-            console.error("❌ Error calling Gemini AI:", error);
-            aiResponseEl.textContent = `❌ Lỗi: ${error.message}`;
+        });
+
+        window.electronAPI.onGeminiError(({ message }) => {
+            console.error("❌ Error calling Gemini AI:", message);
+            aiResponseEl.textContent = `❌ Lỗi: ${message}`;
             updateProgress("Lỗi AI!", true);
-        }
+        });
+
+        window.electronAPI.streamGemini({ content, model: state.selectedModel });
     }
 
     const sleep = ms => new Promise(r => setTimeout(r, ms));
