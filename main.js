@@ -30,8 +30,80 @@ function dataUriToGenerativePart(dataUri) {
 
 // --- STATE ---
 let mainWindow;
+let proChatWindow;
 let isBlockingNetwork = false;
 let requestQueue = [];
+
+// --- Pro-Chat Integration ---
+
+// Hàm chuẩn hóa header (chuyển hết về lowercase)
+function normalizeHeaders(headers) {
+  const out = {};
+  for (const key of Object.keys(headers || {})) {
+    out[key.toLowerCase()] = headers[key];
+  }
+  return out;
+}
+
+// ⚙️ Chặn và xóa các header bảo mật ngăn nhúng (X-Frame-Options, CSP)
+function setupHeaderBypass() {
+  const filter = { urls: ['<all_urls>'] };
+
+  session.defaultSession.webRequest.onHeadersReceived(filter, (details, callback) => {
+    const raw = details.responseHeaders || {};
+    const headersLower = normalizeHeaders(raw);
+
+    // Xóa các header gây chặn
+    const removeList = [
+      'x-frame-options',
+      'frame-options',
+      'content-security-policy'
+    ];
+
+    for (const h of removeList) {
+      if (headersLower[h]) delete headersLower[h];
+    }
+
+    // Build lại header
+    const newHeaders = {};
+    for (const key of Object.keys(headersLower)) {
+      newHeaders[key] = Array.isArray(headersLower[key])
+        ? headersLower[key]
+        : [String(headersLower[key])];
+    }
+
+    callback({ cancel: false, responseHeaders: newHeaders });
+  });
+}
+
+
+// 🪟 Tạo cửa sổ Pro-Chat
+function createProChatWindow() {
+    if (proChatWindow) {
+        proChatWindow.focus();
+        return;
+    }
+
+  proChatWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    backgroundColor: '#121212',
+    title: 'Pro-Chat',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'Pro-Chat', 'preload.js')
+    }
+  });
+
+  // Load trực tiếp trang mục tiêu
+  proChatWindow.loadURL('https://lmarena.ai/');
+
+  proChatWindow.on('closed', () => {
+    proChatWindow = null;
+  });
+}
+
 
 // --- GEMINI API HANDLER ---
 ipcMain.on('stream-gemini', async (event, { content, model }) => {
@@ -220,6 +292,7 @@ app.disableHardwareAcceleration();
 
 app.whenReady().then(async () => {
     await loadBlockingState();
+    setupHeaderBypass();
 
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
         callback(true);
@@ -278,6 +351,10 @@ ipcMain.on('clear-request-queue', () => {
     requestQueue = [];
     console.log('Request queue cleared.');
     sendQueueToRenderer();
+});
+
+ipcMain.on('open-prochat-window', () => {
+    createProChatWindow();
 });
 
 ipcMain.on('save-screenshot', async (event, dataUrl) => {

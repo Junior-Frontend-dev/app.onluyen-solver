@@ -54,5 +54,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onVisionStreamEnd: (callback) => ipcRenderer.on('vision-stream-end', () => callback()),
   onVisionStreamError: (callback) => ipcRenderer.on('vision-stream-error', (_event, value) => callback(value)),
 
+  openProChatWindow: () => ipcRenderer.send('open-prochat-window'),
+
 
 });

@@ -32,6 +32,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     googleSearchToggle = document.getElementById('google-search-toggle');
     autoBypassCheatToggle = document.getElementById('auto-bypass-cheat-toggle');
     chatBtn = document.getElementById('chat-btn');
+    const proChatBtn = document.getElementById('pro-chat-btn');
+    proChatBtn.addEventListener('click', () => {
+        window.electronAPI.openProChatWindow();
+    });
     chatPopup = document.getElementById('chat-popup');
     chatPopupHeader = document.getElementById('chat-popup-header');
     chatPopupCloseBtn = document.getElementById('chat-popup-close-btn');
